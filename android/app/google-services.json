@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "268248668862",
+    "firebase_url": "https://aifit-a7f6b-default-rtdb.firebaseio.com",
+    "project_id": "aifit-a7f6b",
+    "storage_bucket": "aifit-a7f6b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:268248668862:android:4fb9ca0c4627a45a835cef",
+        "android_client_info": {
+          "package_name": "com.example.aifit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "268248668862-f1fp960traqm1i0t6ir8sms4qt23339d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLjB0VTpiDKcSEQMbKPIYAolIRkyrsIqk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "268248668862-f1fp960traqm1i0t6ir8sms4qt23339d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "268248668862-7eghtc9pte6vk8r92197amh361692ipt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.aifit"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

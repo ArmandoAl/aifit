@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>268248668862-7eghtc9pte6vk8r92197amh361692ipt.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.268248668862-7eghtc9pte6vk8r92197amh361692ipt</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBq6SXj_CyT3hAqiZzAhgEYzQS4Bqlbufc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>268248668862</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.aifit</string>
+	<key>PROJECT_ID</key>
+	<string>aifit-a7f6b</string>
+	<key>STORAGE_BUCKET</key>
+	<string>aifit-a7f6b.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:268248668862:ios:f0db0f429ce41a2e835cef</string>
+	<key>DATABASE_URL</key>
+	<string>https://aifit-a7f6b-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

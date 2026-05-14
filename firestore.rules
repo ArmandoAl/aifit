@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Nota:
+    // - En desarrollo puedes abrir todo, pero en producción esto es una vulnerabilidad crítica.
+    // - La convención del proyecto para Firestore es:
+    //   - users/{uid}
+    //   - wardrobe_items/{itemId} con campo userId == uid (si se mantiene colección global)
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow read, create, update, delete: if isOwner(userId);
+    }
+
+    // Global wardrobe items collection (scoped by userId field)
+    match /wardrobe_items/{itemId} {
+      // Allow creating items only if userId matches authenticated user
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      
+      // Allow reading individual documents if userId matches
+      allow get: if signedIn() && resource.data.userId == request.auth.uid;
+      
+      // Allow updating/deleting if userId matches
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      
+      // Allow list (queries) for authenticated users
+      // Note: The app code must always filter by userId == request.auth.uid
+      // This is enforced in WardrobeRepositoryImpl.getWardrobeItems()
+      allow list: if signedIn();
+    }
+
+    // Deny by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
