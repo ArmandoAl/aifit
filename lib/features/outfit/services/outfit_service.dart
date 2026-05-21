@@ -140,8 +140,7 @@ class OutfitService {
                 itemImageUrls: itemImageUrls,
                 userBodyPhotoUrl: userContext.bodyPhotoUrl,
                 userFacePhotoUrl: userContext.facePhotoUrl,
-                aiFaceProfile: userContext.faceProfile,
-                aiBodyProfile: userContext.bodyProfile,
+                identityProfile: userContext.identityProfile,
               ),
               userId: uid,
             );
@@ -226,16 +225,8 @@ class OutfitService {
       final profileData = await _profileRepository.getUserProfile(userId);
       if (profileData == null) return const _UserTryOnContext();
 
-      final faceProfile = profileData['aiFaceProfile'] is Map<String, dynamic>
-          ? AiFaceProfile.fromJson(
-              profileData['aiFaceProfile'] as Map<String, dynamic>,
-            )
-          : null;
-      final bodyProfile = profileData['aiBodyProfile'] is Map<String, dynamic>
-          ? AiBodyProfile.fromJson(
-              profileData['aiBodyProfile'] as Map<String, dynamic>,
-            )
-          : null;
+      final identityProfile =
+          IdentityProfile.fromFirestoreUser(profileData);
 
       final bodyPhoto = profileData['bodyPhotos'] != null
           ? (profileData['bodyPhotos'] as List<dynamic>).firstOrNull
@@ -250,8 +241,8 @@ class OutfitService {
       return _UserTryOnContext(
         bodyPhotoUrl: bodyPhoto,
         facePhotoUrl: facePhoto,
-        faceProfile: faceProfile?.isEmpty == false ? faceProfile : null,
-        bodyProfile: bodyProfile?.isEmpty == false ? bodyProfile : null,
+        identityProfile:
+            identityProfile.isEmpty ? null : identityProfile,
       );
     } catch (e) {
       debugPrint('⚠️ Failed to get user try-on context: $e');
@@ -300,14 +291,12 @@ class OutfitService {
 class _UserTryOnContext {
   final String? bodyPhotoUrl;
   final String? facePhotoUrl;
-  final AiFaceProfile? faceProfile;
-  final AiBodyProfile? bodyProfile;
+  final IdentityProfile? identityProfile;
 
   const _UserTryOnContext({
     this.bodyPhotoUrl,
     this.facePhotoUrl,
-    this.faceProfile,
-    this.bodyProfile,
+    this.identityProfile,
   });
 }
 

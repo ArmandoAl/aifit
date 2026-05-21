@@ -148,7 +148,7 @@ class ProfileRepository {
                 .where((u) => u.isNotEmpty && !u.startsWith('mock://'))
                 .toList() ??
             [];
-        await _identityAnalysisService.analyzeAndSaveProfiles(
+        await _identityAnalysisService.analyzeUserIdentity(
           userId: userId,
           bodyPhotoUrls: body,
           facePhotoUrls: face,

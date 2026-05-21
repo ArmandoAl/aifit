@@ -1,14 +1,12 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
 import '../../../core/constants/identity_consistency_prompt.dart';
-import '../../profile/domain/user_identity_profile.dart';
+import '../../../core/utils/image_compression_util.dart';
 import '../domain/outfit_models.dart';
 import 'user_base_image_service.dart';
 
@@ -119,11 +117,7 @@ class VirtualTryOnService {
 
       debugPrint('📥 Downloaded ${downloadedFiles.length} item images${userBaseImageFile != null ? ' + 1 base image' : ''}');
 
-      final prompt = _buildTryOnPrompt(
-        request,
-        faceProfile: request.aiFaceProfile,
-        bodyProfile: request.aiBodyProfile,
-      );
+      final prompt = _buildTryOnPrompt(request);
 
       // 3. Llamar a Gemini 2.5 Flash Image (mismo modelo que funcionó para base image)
       // Configuración estricta de seguridad para evitar bloqueos
@@ -162,31 +156,31 @@ class VirtualTryOnService {
 
       // Comprimir y agregar imagen base del usuario (OPTIMIZACIÓN) o fotos individuales
       if (userBaseImageFile != null) {
-        // Usar imagen base optimizada (1 imagen en lugar de 2-4)
-        debugPrint('⚙️ Optimizing user base image');
-        final compressedBytes = await _compressImage(userBaseImageFile);
-        parts.add(InlineDataPart('image/jpeg', compressedBytes));
-        debugPrint('✅ Using optimized base image (1 image instead of multiple)');
+        debugPrint('⚙️ Encoding identity base image (high quality)');
+        final bytes = await ImageCompressionUtil.compressIdentity(
+          userBaseImageFile,
+        );
+        parts.add(InlineDataPart('image/jpeg', bytes));
       } else {
-        // Fallback: usar fotos individuales comprimidas
         if (downloadedFiles.containsKey('user_body')) {
-          debugPrint('⚙️ Optimizing user body photo');
-          final compressedBytes = await _compressImage(downloadedFiles['user_body']!);
-          parts.add(InlineDataPart('image/jpeg', compressedBytes));
+          final bytes = await ImageCompressionUtil.compressIdentity(
+            downloadedFiles['user_body']!,
+          );
+          parts.add(InlineDataPart('image/jpeg', bytes));
         }
         if (downloadedFiles.containsKey('user_face')) {
-          debugPrint('⚙️ Optimizing user face photo');
-          final compressedBytes = await _compressImage(downloadedFiles['user_face']!);
-          parts.add(InlineDataPart('image/jpeg', compressedBytes));
+          final bytes = await ImageCompressionUtil.compressIdentity(
+            downloadedFiles['user_face']!,
+          );
+          parts.add(InlineDataPart('image/jpeg', bytes));
         }
       }
 
-      // Comprimir y agregar imágenes de prendas
       for (final entry in downloadedFiles.entries) {
         if (entry.key != 'user_body' && entry.key != 'user_face') {
-          debugPrint('⚙️ Optimizing item image: ${entry.key}');
-          final compressedBytes = await _compressImage(entry.value);
-          parts.add(InlineDataPart('image/jpeg', compressedBytes));
+          debugPrint('⚙️ Compressing garment: ${entry.key}');
+          final bytes = await ImageCompressionUtil.compressGarment(entry.value);
+          parts.add(InlineDataPart('image/jpeg', bytes));
         }
       }
 
@@ -234,19 +228,14 @@ class VirtualTryOnService {
     }
   }
 
-  String _buildTryOnPrompt(
-    VirtualTryOnRequest request, {
-    AiFaceProfile? faceProfile,
-    AiBodyProfile? bodyProfile,
-  }) {
+  String _buildTryOnPrompt(VirtualTryOnRequest request) {
     final outfit = request.outfit;
-    final identityBlock = IdentityConsistencyPrompt.buildBlock(
-      face: faceProfile ?? request.aiFaceProfile,
-      body: bodyProfile ?? request.aiBodyProfile,
+    final identityBlock = IdentityConsistencyPrompt.buildTryOnBlock(
+      request.identityProfile,
     );
 
     return """
-Generate a professional, realistic fashion photograph showing a person wearing a complete outfit.
+Generate a realistic ecommerce-style photograph: the SAME person wearing a complete outfit.
 
 $identityBlock
 
@@ -257,21 +246,13 @@ OUTFIT DETAILS:
 ${outfit.outerwearId != null ? '- Outerwear: ${outfit.outerwearId}' : ''}
 
 REQUIREMENTS:
-- Use the clothing items from the provided images
-- Apply them to the person in the user photos
-- Create a realistic, professional fashion photograph
-- Good lighting and composition
-- Fashion magazine quality
-- Natural pose and appearance
-- Ensure clothing fits properly on the person
+- Apply garment images to the person in the identity/base reference image
+- Clothing must fit naturally; colors and textures from garment references
+- Clean neutral or simple background, soft even lighting
+- Natural pose, realistic proportions
+- Premium ecommerce quality — NOT editorial or cinematic
 
-STYLE:
-- Professional fashion photography
-- Clean background (or appropriate setting)
-- High quality, realistic appearance
-- Natural skin tones and textures
-
-Generate a single, high-quality image showing the person wearing the complete outfit.
+Generate one high-quality image of the same individual wearing the full outfit.
 """;
   }
 
@@ -366,26 +347,4 @@ Generate a single, high-quality image showing the person wearing the complete ou
     }
   }
 
-  /// Comprime y redimensiona una imagen para optimizar el payload
-  Future<Uint8List> _compressImage(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      final image = img.decodeImage(bytes);
-      
-      if (image == null) {
-        debugPrint('⚠️ Could not decode image, using original bytes');
-        return bytes;
-      }
-
-      // Redimensionar a un máximo de 1024px para mantener calidad pero bajar peso
-      final resized = img.copyResize(image, width: 1024);
-
-      // Comprimir a JPG con calidad 85 (balance entre calidad y tamaño)
-      return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
-    } catch (e) {
-      debugPrint('⚠️ Error compressing image: $e, using original');
-      // Si falla la compresión, usar bytes originales
-      return await file.readAsBytes();
-    }
-  }
 }
