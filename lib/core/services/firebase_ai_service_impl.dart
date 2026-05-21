@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:aifit/paths.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/image_compression_util.dart';
 
 class FirebaseAIServiceImpl implements AIService {
   @override
@@ -22,8 +23,7 @@ class FirebaseAIServiceImpl implements AIService {
 
       if (images != null) {
         for (var file in images) {
-          final bytes = await file.readAsBytes();
-          // Firebase AI maneja la codificación automáticamente
+          final bytes = await ImageCompressionUtil.compressGarment(file);
           parts.add(InlineDataPart('image/jpeg', bytes));
         }
       }
@@ -45,6 +45,7 @@ class FirebaseAIServiceImpl implements AIService {
   Future<Map<String, dynamic>> analyzeImageToJson({
     required File image,
     required String promptInstruction,
+    AiImagePayload imagePayload = AiImagePayload.garment,
   }) async {
     try {
       // Usamos 'gemini-2.5-pro' porque es mejor siguiendo instrucciones de JSON estricto
@@ -55,7 +56,10 @@ class FirebaseAIServiceImpl implements AIService {
         ),
       );
 
-      final bytes = await image.readAsBytes();
+      final bytes = await ImageCompressionUtil.compress(
+        image,
+        payload: imagePayload,
+      );
       final content = [
         Content.multi([
           TextPart(promptInstruction),

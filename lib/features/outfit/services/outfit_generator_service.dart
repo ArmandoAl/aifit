@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
+import '../../../core/utils/image_compression_util.dart';
 import '../domain/outfit_models.dart';
 
 /// Genera outfits usando Gemini 2.5 Pro con análisis de imágenes
@@ -82,8 +81,9 @@ class OutfitGeneratorService {
 
       // Comprimir y agregar imágenes
       for (final entry in itemImages.entries) {
-        debugPrint('⚙️ Optimizing image for item: ${entry.key}');
-        final compressedBytes = await _compressImage(entry.value);
+        debugPrint('⚙️ Compressing garment for item: ${entry.key}');
+        final compressedBytes =
+            await ImageCompressionUtil.compressGarment(entry.value);
         parts.add(InlineDataPart('image/jpeg', compressedBytes));
       }
 
@@ -130,29 +130,6 @@ class OutfitGeneratorService {
         debugPrint('❌ Error generating outfits: $e');
         throw Exception('Failed to generate outfits: $e');
       }
-    }
-  }
-
-  /// Comprime y redimensiona una imagen para optimizar el payload
-  Future<Uint8List> _compressImage(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      final image = img.decodeImage(bytes);
-
-      if (image == null) {
-        debugPrint('⚠️ Could not decode image, using original bytes');
-        return bytes;
-      }
-
-      // Redimensionar a un máximo de 1024px para mantener calidad pero bajar peso
-      final resized = img.copyResize(image, width: 1024);
-
-      // Comprimir a JPG con calidad 85 (balance entre calidad y tamaño)
-      return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
-    } catch (e) {
-      debugPrint('⚠️ Error compressing image: $e, using original');
-      // Si falla la compresión, usar bytes originales
-      return await file.readAsBytes();
     }
   }
 

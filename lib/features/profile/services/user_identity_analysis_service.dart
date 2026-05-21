@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/interfaces/ai_service.dart';
+import '../../../core/utils/image_compression_util.dart';
 import '../../../core/services/firebase_ai_service_impl.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/utils/identity_photo_collage.dart';
@@ -83,6 +84,7 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
       final raw = await _aiService.analyzeImageToJson(
         image: collageFile,
         promptInstruction: _identityAnalysisPrompt,
+        imagePayload: AiImagePayload.identity,
       );
       profile = IdentityProfile.fromJson(raw);
 
