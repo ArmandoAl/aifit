@@ -9,6 +9,7 @@ import '../../../../core/services/firebase_ai_service_impl.dart';
 import '../../domain/wardrobe_ai_metadata.dart';
 import '../../domain/wardrobe_analysis_prompt.dart';
 import '../../domain/wardrobe_item_model.dart';
+import '../../domain/wardrobe_palette.dart';
 import '../../data/wardrobe_repository_impl.dart';
 import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
@@ -42,46 +43,26 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
   final _outfitPromptController = TextEditingController();
   
   // Available options
-  static const List<String> _styleTags = [
-    'casual',
-    'formal',
-    'sporty',
-    'elegant',
-    'streetwear',
-    'minimalist',
-    'vintage',
-    'bohemian',
-  ];
-  
-  static const List<String> _seasons = [
-    'spring',
-    'summer',
-    'fall',
-    'winter',
-  ];
-  
-  static const List<String> _colors = [
-    'black',
-    'white',
-    'gray',
-    'navy',
-    'blue',
-    'red',
-    'green',
-    'brown',
-    'beige',
-    'pink',
-    'yellow',
-    'orange',
-    'purple',
-  ];
+  List<String> get _paletteColors => WardrobePalette.standardColors;
+  List<String> get _paletteStyleTags => WardrobePalette.standardStyleTags;
+  List<String> get _paletteSeasons => WardrobePalette.standardSeasons;
 
   @override
   void initState() {
     super.initState();
-    _currentItem = widget.item;
+    _currentItem = widget.item.copyWith(
+      colors: WardrobePalette.normalizeColors(widget.item.colors),
+      styleTags: WardrobePalette.normalizeStyleTags(widget.item.styleTags),
+      season: WardrobePalette.normalizeSeasons(widget.item.season),
+    );
     _brandController.text = _currentItem.brand ?? '';
   }
+
+  List<String> get _extraColors =>
+      WardrobePalette.customColors(_currentItem.colors);
+
+  List<String> get _extraStyleTags =>
+      WardrobePalette.customStyleTags(_currentItem.styleTags);
 
   @override
   void dispose() {
@@ -190,18 +171,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       } else {
         tags.add(tag);
       }
-      _currentItem = WardrobeItem(
-        id: _currentItem.id,
-        name: _currentItem.name,
-        type: _currentItem.type,
-        subType: _currentItem.subType,
-        imageUrl: _currentItem.imageUrl,
-        colors: _currentItem.colors,
-        brand: _currentItem.brand,
-        styleTags: tags,
-        season: _currentItem.season,
-        createdAt: _currentItem.createdAt,
-      );
+      _currentItem = _currentItem.copyWith(styleTags: tags);
     });
   }
 
@@ -213,18 +183,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       } else {
         seasons.add(season);
       }
-      _currentItem = WardrobeItem(
-        id: _currentItem.id,
-        name: _currentItem.name,
-        type: _currentItem.type,
-        subType: _currentItem.subType,
-        imageUrl: _currentItem.imageUrl,
-        colors: _currentItem.colors,
-        brand: _currentItem.brand,
-        styleTags: _currentItem.styleTags,
-        season: seasons,
-        createdAt: _currentItem.createdAt,
-      );
+      _currentItem = _currentItem.copyWith(season: seasons);
     });
   }
 
@@ -236,18 +195,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       } else {
         colors.add(color);
       }
-      _currentItem = WardrobeItem(
-        id: _currentItem.id,
-        name: _currentItem.name,
-        type: _currentItem.type,
-        subType: _currentItem.subType,
-        imageUrl: _currentItem.imageUrl,
-        colors: colors,
-        brand: _currentItem.brand,
-        styleTags: _currentItem.styleTags,
-        season: _currentItem.season,
-        createdAt: _currentItem.createdAt,
-      );
+      _currentItem = _currentItem.copyWith(colors: colors);
     });
   }
 
@@ -286,18 +234,24 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
           name: aiData['subType']?.toString() ?? _currentItem.name,
           type: aiData['type']?.toString() ?? _currentItem.type,
           subType: aiData['subType']?.toString() ?? _currentItem.subType,
-          colors: (aiData['colors'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              _currentItem.colors,
-          styleTags: (aiData['styleTags'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              _currentItem.styleTags,
-          season: (aiData['season'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              _currentItem.season,
+          colors: WardrobePalette.normalizeColors(
+            (aiData['colors'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [],
+          ),
+          styleTags: WardrobePalette.normalizeStyleTags(
+            (aiData['styleTags'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [],
+          ),
+          season: WardrobePalette.normalizeSeasons(
+            (aiData['season'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [],
+          ),
           aiMetadata: metadata.isEmpty ? null : metadata,
         );
       });
@@ -314,7 +268,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Item analyzed successfully! Colors, tags, and season have been updated.'),
+            content: Text(
+              '✅ Análisis completo guardado (colores, tags, temporada y metadatos IA v2).',
+            ),
             backgroundColor: AppColors.success,
             duration: Duration(seconds: 3),
           ),
@@ -502,17 +458,8 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                         prefixIcon: Icon(Icons.label_outline),
                       ),
                       onChanged: (value) {
-                        _currentItem = WardrobeItem(
-                          id: _currentItem.id,
-                          name: _currentItem.name,
-                          type: _currentItem.type,
-                          subType: _currentItem.subType,
-                          imageUrl: _currentItem.imageUrl,
-                          colors: _currentItem.colors,
+                        _currentItem = _currentItem.copyWith(
                           brand: value.isEmpty ? null : value,
-                          styleTags: _currentItem.styleTags,
-                          season: _currentItem.season,
-                          createdAt: _currentItem.createdAt,
                         );
                       },
                     ),
@@ -535,26 +482,43 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _colors.map((color) {
-                      final isSelected = _currentItem.colors.contains(color);
-                      return FilterChip(
-                        label: Text(color),
-                        selected: isSelected,
-                        onSelected: _isEditing 
-                            ? (selected) {
-                                _toggleColor(color);
-                              }
-                            : null,
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        checkmarkColor: AppColors.primary,
-                        backgroundColor: Colors.white,
-                        side: BorderSide(
-                          color: isSelected 
-                              ? AppColors.primary 
-                              : Colors.grey.shade300,
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      ..._paletteColors.map((color) {
+                        final isSelected = _currentItem.colors.contains(color);
+                        return FilterChip(
+                          label: Text(color),
+                          selected: isSelected,
+                          onSelected: _isEditing
+                              ? (_) => _toggleColor(color)
+                              : null,
+                          selectedColor:
+                              AppColors.primary.withValues(alpha: 0.2),
+                          checkmarkColor: AppColors.primary,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade300,
+                          ),
+                        );
+                      }),
+                      ..._extraColors.map((color) {
+                        return FilterChip(
+                          label: Text(color),
+                          selected: true,
+                          onSelected: _isEditing
+                              ? (_) => _toggleColor(color)
+                              : null,
+                          selectedColor:
+                              AppColors.secondary.withValues(alpha: 0.2),
+                          checkmarkColor: AppColors.secondary,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: AppColors.secondary.withValues(alpha: 0.5),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                   const SizedBox(height: 24),
 
@@ -567,26 +531,41 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _styleTags.map((tag) {
-                      final isSelected = _currentItem.styleTags.contains(tag);
-                      return FilterChip(
-                        label: Text(tag),
-                        selected: isSelected,
-                        onSelected: _isEditing 
-                            ? (selected) {
-                                _toggleStyleTag(tag);
-                              }
-                            : null,
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        checkmarkColor: AppColors.primary,
-                        backgroundColor: Colors.white,
-                        side: BorderSide(
-                          color: isSelected 
-                              ? AppColors.primary 
-                              : Colors.grey.shade300,
-                        ),
-                      );
-                    }).toList(),
+                    children: [
+                      ..._paletteStyleTags.map((tag) {
+                        final isSelected =
+                            _currentItem.styleTags.contains(tag);
+                        return FilterChip(
+                          label: Text(tag),
+                          selected: isSelected,
+                          onSelected: _isEditing
+                              ? (_) => _toggleStyleTag(tag)
+                              : null,
+                          selectedColor:
+                              AppColors.primary.withValues(alpha: 0.2),
+                          checkmarkColor: AppColors.primary,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.grey.shade300,
+                          ),
+                        );
+                      }),
+                      ..._extraStyleTags.map((tag) {
+                        return FilterChip(
+                          label: Text(tag),
+                          selected: true,
+                          onSelected: _isEditing
+                              ? (_) => _toggleStyleTag(tag)
+                              : null,
+                          selectedColor:
+                              AppColors.secondary.withValues(alpha: 0.2),
+                          checkmarkColor: AppColors.secondary,
+                          backgroundColor: Colors.white,
+                        );
+                      }),
+                    ],
                   ),
                   const SizedBox(height: 24),
 
@@ -599,7 +578,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _seasons.map((season) {
+                    children: _paletteSeasons.map((season) {
                       final isSelected = _currentItem.season.contains(season);
                       return FilterChip(
                         label: Text(season),

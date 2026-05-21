@@ -1,8 +1,10 @@
+import 'wardrobe_palette.dart';
+
 /// Shared Gemini wardrobe analysis prompt (JSON-only, schema v2).
 class WardrobeAnalysisPrompt {
   WardrobeAnalysisPrompt._();
 
-  static const String fullAnalysis = '''
+  static String get fullAnalysis => '''
 You are a professional fashion stylist, fabric/material analyst, silhouette expert, color theory expert, and luxury/streetwear aesthetic classifier.
 
 Analyze this clothing item image carefully. Return ONLY valid JSON (no markdown, no commentary).
@@ -10,9 +12,10 @@ Analyze this clothing item image carefully. Return ONLY valid JSON (no markdown,
 REQUIRED fields (always include):
 - type: one of "top", "bottom", "shoes", "outerwear"
 - subType: specific garment (e.g. "linen shirt", "slim jeans", "sneakers")
-- colors: array of dominant color names
-- styleTags: array of style descriptors (e.g. "casual", "minimalist")
-- season: array of suitable seasons (spring, summer, fall, winter)
+- colors: array of 1-3 dominant colors — USE ONLY these exact values: ${WardrobePalette.colorsForPrompt}
+  (e.g. tan/khaki/camel → beige, grey/charcoal → gray, olive → green)
+- styleTags: array of 1-4 styles — USE ONLY these exact values: ${WardrobePalette.styleTagsForPrompt}
+- season: array of suitable seasons — only: spring, summer, fall, winter
 
 OPTIONAL field:
 - brand: string if a visible brand can be inferred, else omit
@@ -38,10 +41,10 @@ Rules:
 - Output must be a single JSON object.
 ''';
 
-  static const String colorsAndStyleOnly = '''
+  static String get colorsAndStyleOnly => '''
 Analyze this clothing item for colors and style only.
 Return ONLY valid JSON with:
-- colors: array of dominant colors
-- styleTags: array of styles (e.g. "casual", "formal")
+- colors: array of dominant colors — USE ONLY: ${WardrobePalette.colorsForPrompt}
+- styleTags: array of styles — USE ONLY: ${WardrobePalette.styleTagsForPrompt}
 ''';
 }

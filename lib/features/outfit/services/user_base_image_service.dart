@@ -289,24 +289,48 @@ Premium virtual try-on base template. Realistic, neutral, identity-accurate.
     return _getExistingBaseImage(userId);
   }
 
+  /// Removes base image from Storage and Firestore (identity profile kept).
+  Future<void> deleteUserBaseImage(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      final existingUrl = doc.data()?['baseImageUrl'] as String?;
+
+      if (existingUrl != null && existingUrl.isNotEmpty) {
+        try {
+          await _storage.refFromURL(existingUrl).delete();
+        } catch (e) {
+          debugPrint('⚠️ Could not delete base image from Storage: $e');
+        }
+      }
+
+      await _firestore.collection('users').doc(userId).set({
+        'baseImageUrl': FieldValue.delete(),
+        'baseImageGeneratedAt': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('✅ Base image deleted for user $userId');
+    } catch (e) {
+      debugPrint('❌ Error deleting base image: $e');
+      throw Exception('Failed to delete base image: $e');
+    }
+  }
+
   Future<String> regenerateUserBaseImage({
     required String userId,
     required List<String> bodyPhotoUrls,
     required List<String> facePhotoUrls,
+    bool refreshIdentityProfile = true,
   }) async {
-    try {
-      final doc = await _firestore.collection('users').doc(userId).get();
-      final existingUrl = doc.data()?['baseImageUrl'] as String?;
-      if (existingUrl != null) {
-        try {
-          await _storage.refFromURL(existingUrl).delete();
-        } catch (_) {}
-        await _firestore.collection('users').doc(userId).update({
-          'baseImageUrl': FieldValue.delete(),
-        });
-      }
-    } catch (e) {
-      debugPrint('⚠️ Error cleaning up old base image: $e');
+    await deleteUserBaseImage(userId);
+
+    if (refreshIdentityProfile &&
+        (bodyPhotoUrls.isNotEmpty || facePhotoUrls.isNotEmpty)) {
+      await _identityService.analyzeUserIdentity(
+        userId: userId,
+        bodyPhotoUrls: bodyPhotoUrls,
+        facePhotoUrls: facePhotoUrls,
+      );
     }
 
     return generateUserBaseImage(

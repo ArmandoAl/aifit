@@ -1,6 +1,7 @@
+import 'wardrobe_palette.dart';
+
 /// Hidden AI-only semantic metadata for wardrobe items (schema v2).
 /// All fields optional for backward compatibility with older Firestore docs.
-library;
 
 double? _parseDouble(dynamic value) {
   if (value == null) return null;
@@ -20,7 +21,10 @@ Map<String, double>? _parseScoreMap(dynamic value) {
 
 List<String>? _parseStringList(dynamic value) {
   if (value is! List) return null;
-  final list = value.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+  final list = value
+      .map((e) => e.toString())
+      .where((s) => s.isNotEmpty)
+      .toList();
   return list.isEmpty ? null : list;
 }
 
@@ -129,7 +133,11 @@ class WardrobeColorProfile {
   final String? saturation;
   final String? contrast;
 
-  const WardrobeColorProfile({this.temperature, this.saturation, this.contrast});
+  const WardrobeColorProfile({
+    this.temperature,
+    this.saturation,
+    this.contrast,
+  });
 
   factory WardrobeColorProfile.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const WardrobeColorProfile();
@@ -276,8 +284,9 @@ class WardrobeAiMetadata {
       colorProfile: colorProfile.isEmpty ? null : colorProfile,
       styleScores: _parseScoreMap(json['style_scores']),
       genderExpression: genderExpression.isEmpty ? null : genderExpression,
-      layeringCompatibility:
-          layeringCompatibility.isEmpty ? null : layeringCompatibility,
+      layeringCompatibility: layeringCompatibility.isEmpty
+          ? null
+          : layeringCompatibility,
       occasionVectors: _parseScoreMap(json['occasion_vectors']),
       climateCompatibility: _parseScoreMap(json['climate_compatibility']),
       visualAttributes: _parseScoreMap(json['visual_attributes']),
@@ -293,7 +302,8 @@ class WardrobeAiMetadata {
     final map = <String, dynamic>{};
     if (aiSchemaVersion != null) map['ai_schema_version'] = aiSchemaVersion;
     if (visualWeight != null) map['visual_weight'] = visualWeight;
-    if (texture != null && !texture!.isEmpty) map['texture'] = texture!.toJson();
+    if (texture != null && !texture!.isEmpty)
+      map['texture'] = texture!.toJson();
     if (silhouette != null && !silhouette!.isEmpty) {
       map['silhouette'] = silhouette!.toJson();
     }
@@ -334,10 +344,21 @@ Map<String, dynamic> wardrobeFieldsFromAiJson(Map<String, dynamic> aiData) {
     'name': aiData['subType'] ?? 'Unknown',
     'type': aiData['type'] ?? 'unknown',
     'subType': aiData['subType'] ?? 'unknown',
-    'colors': aiData['colors'] ?? [],
+    'colors': WardrobePalette.normalizeColors(
+      (aiData['colors'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          [],
+    ),
+    'styleTags': WardrobePalette.normalizeStyleTags(
+      (aiData['styleTags'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+    ),
+    'season': WardrobePalette.normalizeSeasons(
+      (aiData['season'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+          [],
+    ),
     if (aiData['brand'] != null) 'brand': aiData['brand'],
-    'styleTags': aiData['styleTags'] ?? [],
-    'season': aiData['season'] ?? [],
     if (!metadata.isEmpty) ...metadata.toJson(),
   };
 }

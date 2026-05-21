@@ -48,11 +48,16 @@ class FirebaseAIServiceImpl implements AIService {
     AiImagePayload imagePayload = AiImagePayload.garment,
   }) async {
     try {
-      // Usamos 'gemini-2.5-pro' porque es mejor siguiendo instrucciones de JSON estricto
+      // Prendas: Flash (rápido y suficiente para JSON de wardrobe).
+      // Identidad (collage): Pro para perfil biométrico más detallado.
+      final modelName = imagePayload == AiImagePayload.garment
+          ? 'gemini-2.5-flash'
+          : 'gemini-2.5-pro';
+
       final model = FirebaseAI.vertexAI().generativeModel(
-        model: 'gemini-2.5-pro',
+        model: modelName,
         generationConfig: GenerationConfig(
-          responseMimeType: 'application/json', // 🚨 Forzamos modo JSON
+          responseMimeType: 'application/json',
         ),
       );
 

@@ -7,7 +7,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
+import 'dart:convert';
 import '../../data/profile_repository.dart';
+import '../../domain/user_identity_profile.dart';
 import '../../../outfit/services/user_base_image_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -27,6 +29,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final List<String> _bodyPhotoUrls = [];
   final List<String> _facePhotoUrls = [];
   String? _baseImageUrl; // URL de la imagen base generada
+  IdentityProfile? _identityProfile;
+  String? _identityCollageUrl;
 
   final int _maxBodyPhotos = 4;
   final int _maxFacePhotos = 4;
@@ -203,57 +207,60 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadUserPhotos();
   }
 
-  Future<void> _generateBaseImage() async {
+  Future<void> _generateOrRegenerateBaseImage() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
 
-    // Validar que haya fotos disponibles
     if (_bodyPhotoUrls.isEmpty && _facePhotoUrls.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please upload at least one body or face photo first'),
+          content: Text('Sube al menos una foto de cara o cuerpo primero'),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
 
-    setState(() {
-      _isGeneratingBaseImage = true;
-    });
+    setState(() => _isGeneratingBaseImage = true);
 
     try {
       final userId = authState.user.id;
+      final isRegenerate = _baseImageUrl != null;
 
-      // Generar imagen base usando las fotos subidas
-      final baseImageUrl = await _baseImageService.generateUserBaseImage(
-        userId: userId,
-        bodyPhotoUrls: _bodyPhotoUrls,
-        facePhotoUrls: _facePhotoUrls,
-      );
+      final baseImageUrl = isRegenerate
+          ? await _baseImageService.regenerateUserBaseImage(
+              userId: userId,
+              bodyPhotoUrls: _bodyPhotoUrls,
+              facePhotoUrls: _facePhotoUrls,
+            )
+          : await _baseImageService.generateUserBaseImage(
+              userId: userId,
+              bodyPhotoUrls: _bodyPhotoUrls,
+              facePhotoUrls: _facePhotoUrls,
+            );
 
-      // Actualizar el estado para mostrar la imagen base inmediatamente
       if (mounted) {
-        setState(() {
-          _baseImageUrl = baseImageUrl;
-        });
-
+        await _loadUserPhotos();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Base image generated successfully! It will be used for all Virtual Try-On outfits.'),
+          SnackBar(
+            content: Text(
+              isRegenerate
+                  ? '✅ Imagen base regenerada correctamente'
+                  : '✅ Imagen base generada correctamente',
+            ),
             backgroundColor: AppColors.success,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
 
-      debugPrint('✅ Base image generated: $baseImageUrl');
+      debugPrint('✅ Base image: $baseImageUrl');
     } catch (e) {
       debugPrint('❌ Error generating base image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error generating base image: $e'),
+            content: Text('Error: $e'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 4),
           ),
@@ -261,11 +268,99 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isGeneratingBaseImage = false;
-        });
+        setState(() => _isGeneratingBaseImage = false);
       }
     }
+  }
+
+  Future<void> _deleteBaseImage() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated || _baseImageUrl == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar imagen base'),
+        content: const Text(
+          'Se eliminará la imagen base de IA. Podrás generar una nueva después. '
+          'Tu perfil de identidad (rasgos) se conserva.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isGeneratingBaseImage = true);
+    try {
+      await _baseImageService.deleteUserBaseImage(authState.user.id);
+      if (mounted) {
+        setState(() => _baseImageUrl = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Imagen base eliminada'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingBaseImage = false);
+    }
+  }
+
+  void _showIdentityProfileDialog() {
+    if (_identityProfile == null || _identityProfile!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aún no hay perfil de identidad. Genera o regenera la imagen base.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final json = const JsonEncoder.withIndent('  ').convert(
+      _identityProfile!.toJson(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Perfil de identidad (IA)'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            json,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUserPhotos() async {
@@ -321,16 +416,24 @@ class _ProfilePageState extends State<ProfilePage> {
             debugPrint('⚠️ No facePhotos field in profile data');
           }
 
-          // Load base image URL
+          _baseImageUrl = null;
           if (profileData['baseImageUrl'] != null) {
             final baseUrl = profileData['baseImageUrl'].toString();
             if (baseUrl.isNotEmpty && !baseUrl.startsWith('mock://')) {
               _baseImageUrl = baseUrl;
               debugPrint('✅ Found base image URL: $_baseImageUrl');
             }
-          } else {
-            debugPrint('⚠️ No baseImageUrl field in profile data');
           }
+
+          _identityProfile =
+              IdentityProfile.fromFirestoreUser(profileData);
+          if (_identityProfile!.isEmpty) _identityProfile = null;
+
+          final collage = profileData['identityCollageUrl']?.toString();
+          _identityCollageUrl =
+              (collage != null && collage.isNotEmpty && !collage.startsWith('mock://'))
+                  ? collage
+                  : null;
           
           debugPrint('📊 Total photos loaded: ${_bodyPhotoUrls.length} body, ${_facePhotoUrls.length} face');
         });
@@ -616,6 +719,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: CachedNetworkImage(
+                            key: ValueKey(_baseImageUrl),
                             imageUrl: _baseImageUrl!,
                             width: double.infinity,
                             height: 300,
@@ -643,6 +747,53 @@ class _ProfilePageState extends State<ProfilePage> {
                             height: 1.4,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _deleteBaseImage,
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                                label: const Text('Eliminar'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_identityProfile != null)
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _showIdentityProfileDialog,
+                                  icon: const Icon(Icons.badge_outlined, size: 18),
+                                  label: const Text('Ver perfil IA'),
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (_identityProfile != null) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 14,
+                                color: AppColors.success.withValues(alpha: 0.9),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Perfil de rasgos faciales/corporales listo'
+                                  '${_identityCollageUrl != null ? ' · Collage guardado' : ''}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -700,7 +851,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _isGeneratingBaseImage ? null : _generateBaseImage,
+                            onPressed:
+                                _isGeneratingBaseImage ? null : _generateOrRegenerateBaseImage,
                             icon: _isGeneratingBaseImage
                                 ? const SizedBox(
                                     width: 20,
