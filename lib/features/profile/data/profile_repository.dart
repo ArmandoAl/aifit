@@ -3,10 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../services/user_identity_analysis_service.dart';
 
 class ProfileRepository {
   final FirebaseFirestore _firestore = FirestoreService.instance;
   final StorageService _storageService = StorageService();
+  final UserIdentityAnalysisService _identityAnalysisService =
+      UserIdentityAnalysisService();
 
   /// Get user profile data from Firestore
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
@@ -68,6 +71,8 @@ class ProfileRepository {
       }
 
       debugPrint('✅ Body photos process completed');
+
+      _refreshIdentityProfiles(userId);
     } catch (e) {
       debugPrint('❌ Error uploading body photos: $e');
       throw Exception('Failed to upload body photos: $e');
@@ -119,10 +124,39 @@ class ProfileRepository {
       }
 
       debugPrint('✅ Face photos process completed');
+
+      _refreshIdentityProfiles(userId);
     } catch (e) {
       debugPrint('❌ Error uploading face photos: $e');
       throw Exception('Failed to upload face photos: $e');
     }
+  }
+
+  /// Regenerates AI face/body text profiles from stored photo URLs (non-blocking).
+  void _refreshIdentityProfiles(String userId) {
+    Future(() async {
+      try {
+        final profile = await getUserProfile(userId);
+        if (profile == null) return;
+        final body = (profile['bodyPhotos'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .where((u) => u.isNotEmpty && !u.startsWith('mock://'))
+                .toList() ??
+            [];
+        final face = (profile['facePhotos'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .where((u) => u.isNotEmpty && !u.startsWith('mock://'))
+                .toList() ??
+            [];
+        await _identityAnalysisService.analyzeAndSaveProfiles(
+          userId: userId,
+          bodyPhotoUrls: body,
+          facePhotoUrls: face,
+        );
+      } catch (e) {
+        debugPrint('⚠️ Identity profile refresh skipped: $e');
+      }
+    });
   }
 
   /// Remove a photo URL from Firestore and delete from Storage

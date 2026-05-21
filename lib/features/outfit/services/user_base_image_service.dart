@@ -5,7 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../core/constants/identity_consistency_prompt.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/utils/identity_photo_collage.dart';
+import '../../profile/domain/user_identity_profile.dart';
+import '../../profile/services/user_identity_analysis_service.dart';
 import 'package:image/image.dart' as img;
 
 /// Genera y gestiona la imagen base del usuario para Virtual Try-On
@@ -44,50 +48,49 @@ class UserBaseImageService {
         throw Exception('No photos available to generate base image');
       }
 
-      // 1. Descargar fotos del usuario
+      var identityProfiles = await _loadIdentityProfiles(userId);
+      if (identityProfiles.$1 == null && identityProfiles.$2 == null) {
+        await UserIdentityAnalysisService().analyzeAndSaveProfiles(
+          userId: userId,
+          bodyPhotoUrls: bodyPhotoUrls,
+          facePhotoUrls: facePhotoUrls,
+        );
+        identityProfiles = await _loadIdentityProfiles(userId);
+      }
+
+      // 1. Descargar fotos — orden: cara primero, luego cuerpo (hasta 4 para collage)
       final tempDir = await getTemporaryDirectory();
       final downloadedFiles = <File>[];
 
-      // Descargar fotos de cuerpo (Máximo 2)
-      for (final url in bodyPhotoUrls.take(2)) {
-        try {
-          final file = File(
-            '${tempDir.path}/body_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          );
-          final response = await _dio.get(
-            url,
-            options: Options(responseType: ResponseType.bytes),
-          );
-          await file.writeAsBytes(response.data);
-          downloadedFiles.add(file);
-        } catch (e) {
-          debugPrint('⚠️ Failed to download body photo: $e');
-        }
-      }
-
-      // Descargar fotos de cara (Máximo 2)
       for (final url in facePhotoUrls.take(2)) {
-        try {
-          final file = File(
-            '${tempDir.path}/face_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          );
-          final response = await _dio.get(
-            url,
-            options: Options(responseType: ResponseType.bytes),
-          );
-          await file.writeAsBytes(response.data);
-          downloadedFiles.add(file);
-        } catch (e) {
-          debugPrint('⚠️ Failed to download face photo: $e');
-        }
+        final file = await _downloadPhoto(
+          tempDir.path,
+          'face',
+          url,
+        );
+        if (file != null) downloadedFiles.add(file);
+      }
+      for (final url in bodyPhotoUrls.take(2)) {
+        final file = await _downloadPhoto(
+          tempDir.path,
+          'body',
+          url,
+        );
+        if (file != null) downloadedFiles.add(file);
       }
 
       if (downloadedFiles.isEmpty) {
         throw Exception('Failed to download any user photos');
       }
 
-      // 2. Generar imagen base con Gemini 3 Pro Image (Nano Banana Pro)
-      final prompt = _buildBaseImagePrompt();
+      final collageBytes = await IdentityPhotoCollage.buildFromFiles(
+        downloadedFiles,
+      );
+
+      final prompt = _buildBaseImagePrompt(
+        face: identityProfiles.$1,
+        body: identityProfiles.$2,
+      );
 
       // Configuración estricta de seguridad para evitar bloqueos por falsos positivos de desnudez
       final model = FirebaseAI.vertexAI().generativeModel(
@@ -120,19 +123,14 @@ class UserBaseImageService {
         ],
       );
 
-      // --- INTEGRACIÓN DE COMPRESIÓN ---
-      final parts = <Part>[];
-
-      for (final file in downloadedFiles) {
-        debugPrint('⚙️ Optimizing image: ${file.path.split('/').last}');
-        // Comprimimos y redimensionamos a 1024px para asegurar que el payload sea ligero
-        final compressedBytes = await _compressImage(file);
-
-        parts.add(InlineDataPart('image/jpeg', compressedBytes));
-      }
-
-      // El texto se agrega al final para dar contexto a las imágenes previas
-      parts.add(TextPart(prompt));
+      // Una sola imagen compuesta (collage) en lugar de múltiples fotos sueltas
+      final parts = <Part>[
+        InlineDataPart('image/jpeg', collageBytes),
+        TextPart(prompt),
+      ];
+      debugPrint(
+        '🖼️ Identity collage: 1 composite from ${downloadedFiles.length} reference photos',
+      );
 
       final content = [Content.multi(parts)];
 
@@ -187,8 +185,63 @@ class UserBaseImageService {
     }
   }
 
-  /// Construye el prompt para generar la imagen base
-  String _buildBaseImagePrompt() {
+  Future<(AiFaceProfile?, AiBodyProfile?)> _loadIdentityProfiles(
+    String userId,
+  ) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      final data = doc.data();
+      if (data == null) return (null, null);
+      final face = data['aiFaceProfile'] is Map<String, dynamic>
+          ? AiFaceProfile.fromJson(
+              data['aiFaceProfile'] as Map<String, dynamic>,
+            )
+          : null;
+      final body = data['aiBodyProfile'] is Map<String, dynamic>
+          ? AiBodyProfile.fromJson(
+              data['aiBodyProfile'] as Map<String, dynamic>,
+            )
+          : null;
+      return (
+        face?.isEmpty == false ? face : null,
+        body?.isEmpty == false ? body : null,
+      );
+    } catch (e) {
+      debugPrint('⚠️ Could not load identity profiles: $e');
+      return (null, null);
+    }
+  }
+
+  Future<File?> _downloadPhoto(
+    String dirPath,
+    String prefix,
+    String url,
+  ) async {
+    try {
+      final file = File(
+        '$dirPath/${prefix}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      final response = await _dio.get(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      await file.writeAsBytes(response.data);
+      return file;
+    } catch (e) {
+      debugPrint('⚠️ Failed to download $prefix photo: $e');
+      return null;
+    }
+  }
+
+  String _buildBaseImagePrompt({
+    AiFaceProfile? face,
+    AiBodyProfile? body,
+  }) {
+    final identityBlock = IdentityConsistencyPrompt.buildBlock(
+      face: face,
+      body: body,
+    );
+
     return """
 [OUTPUT_SPECIFICATIONS]
 MODE: IMAGE_GENERATION
@@ -197,11 +250,16 @@ ASPECT_RATIO: 3:4
 RESOLUTION: 1024x1024
 QUALITY: HIGH_FASHION_EDITORIAL
 
+[REFERENCE_IMAGE]
+The attached image is a 2x2 identity collage (face angles + body references). Use ALL quadrants to reconstruct one consistent person.
+
 [INSTRUCTION]
 Generate a single, high-quality, professional fashion model photograph.
 
+$identityBlock
+
 [REQUIREMENTS]
-- Combine the face and body features from the provided reference photos.
+- Combine the face and body features from the identity collage.
 - Composition: Full-body shot (from head to feet) or 3/4 shot.
 - Pose: Neutral, standing straight, shoulders back, arms slightly away from the body (A-pose or T-pose preferred for virtual try-on).
 - Visibility: Face and body must be clearly visible, front-facing, with no obstructions.
@@ -271,18 +329,6 @@ This image will be used as a base template for a virtual try-on application. It 
       debugPrint('❌ Error crítico en _extractAndSaveBaseImage: $e');
       rethrow;
     }
-  }
-
-  Future<Uint8List> _compressImage(File file) async {
-    final bytes = await file.readAsBytes();
-    final image = img.decodeImage(bytes);
-    if (image == null) return bytes;
-
-    // Redimensionar a un máximo de 1024px para mantener calidad pero bajar peso
-    final resized = img.copyResize(image, width: 1024);
-
-    // Comprimir a JPG con calidad 80
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 80));
   }
 
   /// Sube la imagen base a Firebase Storage

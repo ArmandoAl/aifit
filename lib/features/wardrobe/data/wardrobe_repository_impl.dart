@@ -6,6 +6,8 @@ import '../../../core/interfaces/ai_service.dart';
 import '../../../core/services/firebase_ai_service_impl.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../domain/wardrobe_analysis_prompt.dart';
+import '../domain/wardrobe_ai_metadata.dart';
 import '../domain/wardrobe_item_model.dart';
 import 'wardrobe_repository.dart';
 
@@ -63,33 +65,15 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
       file: imageFile,
     );
 
-    // 2. Analizar con IA usando el ADAPTER (Abstracción limpia)
-    final prompt = """
-    Analyze this clothing item carefully.
-    Return a JSON with strictly these fields:
-    - type: "top", "bottom", "shoes", or "outerwear"
-    - subType: specific type (e.g., "jeans", "t-shirt")
-    - colors: array of dominant colors
-    - styleTags: array of styles (e.g., "casual", "formal")
-    - season: array of seasons suitable
-    """;
-
-    // Llamada agnóstica de la librería
     final aiData = await _aiService.analyzeImageToJson(
       image: imageFile,
-      promptInstruction: prompt,
+      promptInstruction: WardrobeAnalysisPrompt.fullAnalysis,
     );
 
-    // 3. Guardar en Firestore
     await _firestore.collection('wardrobe_items').add({
       'userId': uid,
       'imageUrl': imageUrl,
-      'name': aiData['subType'] ?? 'Unknown',
-      'type': aiData['type'] ?? 'unknown',
-      'subType': aiData['subType'] ?? 'unknown',
-      'colors': aiData['colors'] ?? [],
-      'styleTags': aiData['styleTags'] ?? [],
-      'season': aiData['season'] ?? [],
+      ...wardrobeFieldsFromAiJson(aiData),
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -122,16 +106,9 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
     List<String> colors = [];
     List<String> styleTags = [];
     try {
-      final prompt = """
-      Analyze this clothing item for colors and style only.
-      Return a JSON with:
-      - colors: array of dominant colors
-      - styleTags: array of styles (e.g., "casual", "formal")
-      """;
-
       final aiData = await _aiService.analyzeImageToJson(
         image: imageFile,
-        promptInstruction: prompt,
+        promptInstruction: WardrobeAnalysisPrompt.colorsAndStyleOnly,
       );
 
       colors =
@@ -175,13 +152,7 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
 
     try {
       await _firestore.collection('wardrobe_items').doc(item.id).update({
-        'name': item.name,
-        'type': item.type,
-        'subType': item.subType,
-        'colors': item.colors,
-        if (item.brand != null && item.brand!.isNotEmpty) 'brand': item.brand,
-        'styleTags': item.styleTags,
-        'season': item.season,
+        ...item.toFirestore(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
       debugPrint('✅ Wardrobe item updated successfully');

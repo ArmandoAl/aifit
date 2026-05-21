@@ -2,6 +2,7 @@
 library;
 
 import 'package:aifit/paths.dart';
+import '../../profile/domain/user_identity_profile.dart';
 
 class OutfitIntent {
   final String?
@@ -142,6 +143,8 @@ class VirtualTryOnRequest {
   final List<String> itemImageUrls; // URLs de las imágenes de las prendas
   final String? userBodyPhotoUrl; // URL de foto de cuerpo del usuario
   final String? userFacePhotoUrl; // URL de foto de cara del usuario
+  final AiFaceProfile? aiFaceProfile;
+  final AiBodyProfile? aiBodyProfile;
   final Map<String, dynamic>? generationOptions; // Opciones para la generación
 
   VirtualTryOnRequest({
@@ -149,6 +152,8 @@ class VirtualTryOnRequest {
     required this.itemImageUrls,
     this.userBodyPhotoUrl,
     this.userFacePhotoUrl,
+    this.aiFaceProfile,
+    this.aiBodyProfile,
     this.generationOptions,
   });
 

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
+import '../../../core/constants/identity_consistency_prompt.dart';
+import '../../profile/domain/user_identity_profile.dart';
 import '../domain/outfit_models.dart';
 import 'user_base_image_service.dart';
 
@@ -117,8 +119,11 @@ class VirtualTryOnService {
 
       debugPrint('📥 Downloaded ${downloadedFiles.length} item images${userBaseImageFile != null ? ' + 1 base image' : ''}');
 
-      // 2. Construir prompt para Gemini 2.5 Flash Image
-      final prompt = _buildTryOnPrompt(request);
+      final prompt = _buildTryOnPrompt(
+        request,
+        faceProfile: request.aiFaceProfile,
+        bodyProfile: request.aiBodyProfile,
+      );
 
       // 3. Llamar a Gemini 2.5 Flash Image (mismo modelo que funcionó para base image)
       // Configuración estricta de seguridad para evitar bloqueos
@@ -229,12 +234,21 @@ class VirtualTryOnService {
     }
   }
 
-  /// Construye prompt para generación de imagen
-  String _buildTryOnPrompt(VirtualTryOnRequest request) {
+  String _buildTryOnPrompt(
+    VirtualTryOnRequest request, {
+    AiFaceProfile? faceProfile,
+    AiBodyProfile? bodyProfile,
+  }) {
     final outfit = request.outfit;
-    
+    final identityBlock = IdentityConsistencyPrompt.buildBlock(
+      face: faceProfile ?? request.aiFaceProfile,
+      body: bodyProfile ?? request.aiBodyProfile,
+    );
+
     return """
 Generate a professional, realistic fashion photograph showing a person wearing a complete outfit.
+
+$identityBlock
 
 OUTFIT DETAILS:
 - Top: ${outfit.topId ?? 'N/A'}

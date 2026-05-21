@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/firebase_ai_service_impl.dart';
+import '../../domain/wardrobe_ai_metadata.dart';
+import '../../domain/wardrobe_analysis_prompt.dart';
 import '../../domain/wardrobe_item_model.dart';
 import '../../data/wardrobe_repository_impl.dart';
 import '../bloc/wardrobe_bloc.dart';
@@ -270,42 +272,33 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
 
       // 2. Analyze with AI
       debugPrint('🔍 Analyzing image with AI...');
-      final prompt = """
-      Analyze this clothing item carefully.
-      Return a JSON with strictly these fields:
-      - type: "top", "bottom", "shoes", or "outerwear"
-      - subType: specific type (e.g., "jeans", "t-shirt", "sneakers")
-      - colors: array of dominant colors (e.g., ["blue", "navy"])
-      - styleTags: array of styles (e.g., ["casual", "formal", "sporty"])
-      - season: array of seasons suitable (e.g., ["spring", "summer", "fall", "winter"])
-      """;
-
       final aiData = await _aiService.analyzeImageToJson(
         image: imageFile,
-        promptInstruction: prompt,
+        promptInstruction: WardrobeAnalysisPrompt.fullAnalysis,
       );
 
       debugPrint('✅ AI Analysis completed: $aiData');
 
-      // 3. Update item with AI data
+      final metadata = WardrobeAiMetadata.fromAnalysisJson(aiData);
+
       setState(() {
-        _currentItem = WardrobeItem(
-          id: _currentItem.id,
-          name: aiData['subType'] ?? _currentItem.name,
-          type: aiData['type'] ?? _currentItem.type,
-          subType: aiData['subType'] ?? _currentItem.subType,
-          imageUrl: _currentItem.imageUrl,
+        _currentItem = _currentItem.copyWith(
+          name: aiData['subType']?.toString() ?? _currentItem.name,
+          type: aiData['type']?.toString() ?? _currentItem.type,
+          subType: aiData['subType']?.toString() ?? _currentItem.subType,
           colors: (aiData['colors'] as List<dynamic>?)
                   ?.map((e) => e.toString())
-                  .toList() ?? _currentItem.colors,
-          brand: _currentItem.brand, // Keep existing brand
+                  .toList() ??
+              _currentItem.colors,
           styleTags: (aiData['styleTags'] as List<dynamic>?)
-                     ?.map((e) => e.toString())
-                     .toList() ?? _currentItem.styleTags,
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              _currentItem.styleTags,
           season: (aiData['season'] as List<dynamic>?)
                   ?.map((e) => e.toString())
-                  .toList() ?? _currentItem.season,
-          createdAt: _currentItem.createdAt,
+                  .toList() ??
+              _currentItem.season,
+          aiMetadata: metadata.isEmpty ? null : metadata,
         );
       });
 

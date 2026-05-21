@@ -6,6 +6,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../../wardrobe/data/wardrobe_repository_impl.dart';
 import '../../profile/data/profile_repository.dart';
+import '../../profile/domain/user_identity_profile.dart';
 import '../domain/outfit_models.dart';
 import '../domain/saved_outfit_model.dart';
 import '../data/saved_outfits_repository.dart';
@@ -112,7 +113,7 @@ class OutfitService {
         );
 
         // Obtener fotos del usuario una sola vez (se reutilizan)
-        final userPhotos = await _getUserPhotos(uid);
+        final userContext = await _getUserTryOnContext(uid);
 
         // CICLO: Generar imagen para cada outfit (uno por uno para no sobrecargar)
         for (int i = 0; i < validOutfits.length; i++) {
@@ -137,8 +138,10 @@ class OutfitService {
               request: VirtualTryOnRequest(
                 outfit: outfit,
                 itemImageUrls: itemImageUrls,
-                userBodyPhotoUrl: userPhotos['body'],
-                userFacePhotoUrl: userPhotos['face'],
+                userBodyPhotoUrl: userContext.bodyPhotoUrl,
+                userFacePhotoUrl: userContext.facePhotoUrl,
+                aiFaceProfile: userContext.faceProfile,
+                aiBodyProfile: userContext.bodyProfile,
               ),
               userId: uid,
             );
@@ -218,31 +221,41 @@ class OutfitService {
     return urls;
   }
 
-  /// Obtiene fotos del usuario (body y face)
-  Future<Map<String, String?>> _getUserPhotos(String userId) async {
+  Future<_UserTryOnContext> _getUserTryOnContext(String userId) async {
     try {
       final profileData = await _profileRepository.getUserProfile(userId);
+      if (profileData == null) return const _UserTryOnContext();
 
-      // Si tiene un base image, usarlo
-      final baseImageUrl = profileData?['baseImageUrl'] as String?;
-      if (baseImageUrl != null && baseImageUrl.isNotEmpty) {
-        return {'userImage': baseImageUrl};
-      }
+      final faceProfile = profileData['aiFaceProfile'] is Map<String, dynamic>
+          ? AiFaceProfile.fromJson(
+              profileData['aiFaceProfile'] as Map<String, dynamic>,
+            )
+          : null;
+      final bodyProfile = profileData['aiBodyProfile'] is Map<String, dynamic>
+          ? AiBodyProfile.fromJson(
+              profileData['aiBodyProfile'] as Map<String, dynamic>,
+            )
+          : null;
 
-      final bodyPhoto = profileData?['bodyPhotos'] != null
-          ? (profileData!['bodyPhotos'] as List<dynamic>).firstOrNull
+      final bodyPhoto = profileData['bodyPhotos'] != null
+          ? (profileData['bodyPhotos'] as List<dynamic>).firstOrNull
                 ?.toString()
           : null;
 
-      final facePhoto = profileData?['facePhotos'] != null
-          ? (profileData!['facePhotos'] as List<dynamic>).firstOrNull
+      final facePhoto = profileData['facePhotos'] != null
+          ? (profileData['facePhotos'] as List<dynamic>).firstOrNull
                 ?.toString()
           : null;
 
-      return {'body': bodyPhoto, 'face': facePhoto};
+      return _UserTryOnContext(
+        bodyPhotoUrl: bodyPhoto,
+        facePhotoUrl: facePhoto,
+        faceProfile: faceProfile?.isEmpty == false ? faceProfile : null,
+        bodyProfile: bodyProfile?.isEmpty == false ? bodyProfile : null,
+      );
     } catch (e) {
-      debugPrint('⚠️ Failed to get user photos: $e');
-      return {'body': null, 'face': null};
+      debugPrint('⚠️ Failed to get user try-on context: $e');
+      return const _UserTryOnContext();
     }
   }
 
@@ -282,6 +295,20 @@ class OutfitService {
       // No lanzar error - es opcional, pero loguear para debugging
     }
   }
+}
+
+class _UserTryOnContext {
+  final String? bodyPhotoUrl;
+  final String? facePhotoUrl;
+  final AiFaceProfile? faceProfile;
+  final AiBodyProfile? bodyProfile;
+
+  const _UserTryOnContext({
+    this.bodyPhotoUrl,
+    this.facePhotoUrl,
+    this.faceProfile,
+    this.bodyProfile,
+  });
 }
 
 /// Resultado de la generación completa de outfit
