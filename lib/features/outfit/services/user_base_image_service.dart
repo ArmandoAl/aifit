@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -211,7 +210,9 @@ class UserBaseImageService {
   }
 
   String _buildBaseImagePrompt(IdentityProfile? profile) {
-    final identityBlock = IdentityConsistencyPrompt.buildBaseImageBlock(profile);
+    final identityBlock = IdentityConsistencyPrompt.buildBaseImageBlock(
+      profile,
+    );
 
     return """
 [OUTPUT_SPECIFICATIONS]
@@ -271,14 +272,21 @@ Premium virtual try-on base template. Realistic, neutral, identity-accurate.
     throw Exception('No image returned from base image generation');
   }
 
-  Future<String> _uploadBaseImageToStorage(String userId, File imageFile) async {
-    final path = 'users/$userId/base_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  Future<String> _uploadBaseImageToStorage(
+    String userId,
+    File imageFile,
+  ) async {
+    final path =
+        'users/$userId/base_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child(path);
     await ref.putFile(imageFile);
     return ref.getDownloadURL();
   }
 
-  Future<void> _saveBaseImageUrlToFirestore(String userId, String imageUrl) async {
+  Future<void> _saveBaseImageUrlToFirestore(
+    String userId,
+    String imageUrl,
+  ) async {
     await _firestore.collection('users').doc(userId).set({
       'baseImageUrl': imageUrl,
       'baseImageGeneratedAt': FieldValue.serverTimestamp(),

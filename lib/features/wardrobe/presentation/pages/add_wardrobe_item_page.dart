@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -13,10 +12,7 @@ import '../bloc/wardrobe_event.dart';
 class AddWardrobeItemPage extends StatefulWidget {
   final List<File>? initialImages;
 
-  const AddWardrobeItemPage({
-    super.key,
-    this.initialImages,
-  });
+  const AddWardrobeItemPage({super.key, this.initialImages});
 
   @override
   State<AddWardrobeItemPage> createState() => _AddWardrobeItemPageState();
@@ -25,10 +21,10 @@ class AddWardrobeItemPage extends StatefulWidget {
 class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
   final ImagePicker _picker = ImagePicker();
   final WardrobeRepositoryImpl _repository = WardrobeRepositoryImpl();
-  
+
   final List<File> _selectedImages = [];
   final List<ItemFormData> _formDataList = [];
-  
+
   bool _isUploading = false;
 
   // Clothing type options
@@ -53,17 +49,15 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
     debugPrint('🔄 AddWardrobeItemPage initState');
     debugPrint('   - initialImages: ${widget.initialImages?.length ?? 0}');
     debugPrint('   - initialImages is null: ${widget.initialImages == null}');
-    
+
     if (widget.initialImages != null && widget.initialImages!.isNotEmpty) {
       for (var img in widget.initialImages!) {
         debugPrint('   - Image path: ${img.path}');
         debugPrint('   - Image exists: ${img.existsSync()}');
       }
-      
+
       _selectedImages.addAll(widget.initialImages!);
-      _formDataList.addAll(
-        widget.initialImages!.map((_) => ItemFormData()),
-      );
+      _formDataList.addAll(widget.initialImages!.map((_) => ItemFormData()));
       debugPrint('✅ Initialized with ${_selectedImages.length} images');
     } else {
       debugPrint('⚠️ No initial images provided - showing empty state');
@@ -71,20 +65,15 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
   }
 
   Future<void> _pickImages() async {
-    final List<XFile> images = await _picker.pickMultiImage(
-      imageQuality: 85,
-    );
+    final List<XFile> images = await _picker.pickMultiImage(imageQuality: 85);
 
     if (images.isNotEmpty) {
       setState(() {
         _selectedImages.addAll(images.map((x) => File(x.path)));
-        _formDataList.addAll(
-          images.map((_) => ItemFormData()),
-        );
+        _formDataList.addAll(images.map((_) => ItemFormData()));
       });
     }
   }
-
 
   bool _validateForms() {
     for (int i = 0; i < _formDataList.length; i++) {
@@ -105,12 +94,12 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
     debugPrint('💾 Save button pressed');
     debugPrint('   - Images: ${_selectedImages.length}');
     debugPrint('   - Form data: ${_formDataList.length}');
-    
+
     if (!_validateForms()) {
       debugPrint('❌ Form validation failed');
       return;
     }
-    
+
     debugPrint('✅ Form validation passed');
 
     final authState = context.read<AuthBloc>().state;
@@ -177,13 +166,17 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🏗️ AddWardrobeItemPage build - images: ${_selectedImages.length}');
+    debugPrint(
+      '🏗️ AddWardrobeItemPage build - images: ${_selectedImages.length}',
+    );
     final isSingleItem = _selectedImages.length == 1;
     debugPrint('🏗️ Is single item: $isSingleItem');
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSingleItem ? 'Add Item' : 'Add Items (${_selectedImages.length})'),
+        title: Text(
+          isSingleItem ? 'Add Item' : 'Add Items (${_selectedImages.length})',
+        ),
         actions: [
           if (_selectedImages.isNotEmpty)
             Padding(
@@ -197,7 +190,9 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -246,10 +241,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
           const SizedBox(height: 24),
           Text(
             'No images selected',
-            style: TextStyle(
-              fontSize: 18,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -257,10 +249,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
             icon: const Icon(Icons.photo_library),
             label: const Text('Select Images'),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
           ),
         ],
@@ -350,7 +339,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
         ],
         // Type dropdown
         DropdownButtonFormField<String>(
-          value: formData.type,
+          initialValue: formData.type,
           decoration: const InputDecoration(
             labelText: 'Type *',
             border: OutlineInputBorder(),
@@ -371,7 +360,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
         const SizedBox(height: 16),
         // Sub-type dropdown
         DropdownButtonFormField<String>(
-          value: formData.subType,
+          initialValue: formData.subType,
           decoration: const InputDecoration(
             labelText: 'Sub-type *',
             border: OutlineInputBorder(),
@@ -417,9 +406,5 @@ class ItemFormData {
   String? subType;
   String? brand;
 
-  ItemFormData({
-    this.type,
-    this.subType,
-    this.brand,
-  });
+  ItemFormData({this.type, this.subType, this.brand});
 }

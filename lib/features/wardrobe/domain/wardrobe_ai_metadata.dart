@@ -302,8 +302,9 @@ class WardrobeAiMetadata {
     final map = <String, dynamic>{};
     if (aiSchemaVersion != null) map['ai_schema_version'] = aiSchemaVersion;
     if (visualWeight != null) map['visual_weight'] = visualWeight;
-    if (texture != null && !texture!.isEmpty)
+    if (texture != null && !texture!.isEmpty) {
       map['texture'] = texture!.toJson();
+    }
     if (silhouette != null && !silhouette!.isEmpty) {
       map['silhouette'] = silhouette!.toJson();
     }

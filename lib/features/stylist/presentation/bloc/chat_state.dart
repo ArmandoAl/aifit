@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/chat_models.dart';
+import '../../domain/stylist_intent_state.dart';
 
 abstract class ChatState extends Equatable {
   const ChatState();
@@ -15,22 +16,40 @@ class ChatInitial extends ChatState {
 class ChatLoaded extends ChatState {
   final List<ChatMessage> messages;
   final bool isTyping;
+  final bool isGenerating;
+  final StylistIntentState accumulatedIntent;
+  final bool readyToGenerate;
 
   const ChatLoaded({
     required this.messages,
     this.isTyping = false,
+    this.isGenerating = false,
+    this.accumulatedIntent = const StylistIntentState(),
+    this.readyToGenerate = false,
   });
 
   ChatLoaded copyWith({
     List<ChatMessage>? messages,
     bool? isTyping,
+    bool? isGenerating,
+    StylistIntentState? accumulatedIntent,
+    bool? readyToGenerate,
   }) {
     return ChatLoaded(
       messages: messages ?? this.messages,
       isTyping: isTyping ?? this.isTyping,
+      isGenerating: isGenerating ?? this.isGenerating,
+      accumulatedIntent: accumulatedIntent ?? this.accumulatedIntent,
+      readyToGenerate: readyToGenerate ?? this.readyToGenerate,
     );
   }
 
   @override
-  List<Object?> get props => [messages, isTyping];
+  List<Object?> get props => [
+        messages,
+        isTyping,
+        isGenerating,
+        accumulatedIntent,
+        readyToGenerate,
+      ];
 }

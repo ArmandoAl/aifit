@@ -4,12 +4,12 @@ import '../domain/outfit_models.dart';
 import 'wardrobe_metadata_scorer.dart';
 
 /// Algoritmo de búsqueda y filtrado de prendas
-/// 
+///
 /// Filtra el guardarropa del usuario basado en criterios de búsqueda
 /// y calcula compatibilidad entre prendas para optimizar resultados.
 class WardrobeSearchAlgorithm {
   /// Filtra prendas basado en intención del usuario
-  /// 
+  ///
   /// Retorna prendas separadas por tipo, ordenadas por relevancia
   static FilteredWardrobe filterWardrobe({
     required List<WardrobeItem> allItems,
@@ -22,9 +22,13 @@ class WardrobeSearchAlgorithm {
     final tops = allItems.where((item) => item.type == 'top').toList();
     final bottoms = allItems.where((item) => item.type == 'bottom').toList();
     final shoes = allItems.where((item) => item.type == 'shoes').toList();
-    final outerwear = allItems.where((item) => item.type == 'outerwear').toList();
+    final outerwear = allItems
+        .where((item) => item.type == 'outerwear')
+        .toList();
 
-    debugPrint('   By type: ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes, ${outerwear.length} outerwear');
+    debugPrint(
+      '   By type: ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes, ${outerwear.length} outerwear',
+    );
 
     // Filtrar y rankear cada tipo
     final filteredTops = _filterAndRankItems(tops, intent);
@@ -34,7 +38,7 @@ class WardrobeSearchAlgorithm {
 
     // Limitar a máximo 20-30 items por tipo para optimizar costos
     final maxItemsPerType = 10;
-    
+
     return FilteredWardrobe(
       tops: filteredTops.take(maxItemsPerType).toList(),
       bottoms: filteredBottoms.take(maxItemsPerType).toList(),
@@ -59,15 +63,15 @@ class WardrobeSearchAlgorithm {
     // Filtrar items con score mínimo (más estricto si hay colores preferidos)
     // Si el usuario especificó colores, ser más estricto
     final minScore = intent.preferredColors.isNotEmpty ? 0.4 : 0.3;
-    final filtered = scoredItems
-        .where((entry) {
-          final passes = entry.value >= minScore;
-          if (!passes) {
-            debugPrint('   ❌ Item ${entry.key.id} filtered out: score ${entry.value.toStringAsFixed(2)} < $minScore');
-          }
-          return passes;
-        })
-        .toList();
+    final filtered = scoredItems.where((entry) {
+      final passes = entry.value >= minScore;
+      if (!passes) {
+        debugPrint(
+          '   ❌ Item ${entry.key.id} filtered out: score ${entry.value.toStringAsFixed(2)} < $minScore',
+        );
+      }
+      return passes;
+    }).toList();
 
     // Ordenar por score descendente
     filtered.sort((a, b) => b.value.compareTo(a.value));
@@ -86,12 +90,32 @@ class WardrobeSearchAlgorithm {
 
     // CRÍTICO 1: Verificar mustInclude con colores específicos para tipo de prenda
     if (intent.constraints?['mustInclude'] != null) {
-      final mustInclude = intent.constraints!['mustInclude'].toString().toLowerCase();
-      
+      final mustInclude = intent.constraints!['mustInclude']
+          .toString()
+          .toLowerCase();
+
       // Extraer colores del mustInclude (ej: "white or beige pants" → ["white", "beige"])
-      final colorKeywords = ['white', 'beige', 'black', 'blue', 'red', 'green', 'brown', 'gray', 'grey', 'navy', 'tan', 'khaki', 'cream', 'ivory', 'off-white'];
-      final mentionedColors = colorKeywords.where((color) => mustInclude.contains(color)).toList();
-      
+      final colorKeywords = [
+        'white',
+        'beige',
+        'black',
+        'blue',
+        'red',
+        'green',
+        'brown',
+        'gray',
+        'grey',
+        'navy',
+        'tan',
+        'khaki',
+        'cream',
+        'ivory',
+        'off-white',
+      ];
+      final mentionedColors = colorKeywords
+          .where((color) => mustInclude.contains(color))
+          .toList();
+
       // Si mustInclude menciona un tipo de prenda específico
       final itemTypeKeywords = {
         'pants': ['bottom', 'pants', 'pantalon', 'pantalones'],
@@ -103,7 +127,7 @@ class WardrobeSearchAlgorithm {
         'shoes': ['shoes', 'zapatos', 'zapato'],
         'shoe': ['shoes', 'zapatos', 'zapato'],
       };
-      
+
       String? requiredType;
       for (final entry in itemTypeKeywords.entries) {
         if (mustInclude.contains(entry.key)) {
@@ -111,47 +135,52 @@ class WardrobeSearchAlgorithm {
           break;
         }
       }
-      
+
       // Verificar si este item es del tipo requerido
       bool isRelevantType = true;
       if (requiredType != null) {
         final typeKeywords = itemTypeKeywords[requiredType]!;
-        isRelevantType = typeKeywords.any((keyword) => 
-          item.type.toLowerCase().contains(keyword) || 
-          item.subType.toLowerCase().contains(keyword) ||
-          item.name.toLowerCase().contains(keyword)
+        isRelevantType = typeKeywords.any(
+          (keyword) =>
+              item.type.toLowerCase().contains(keyword) ||
+              item.subType.toLowerCase().contains(keyword) ||
+              item.name.toLowerCase().contains(keyword),
         );
       }
-      
+
       // Si mustInclude menciona colores Y un tipo de prenda específico
       if (mentionedColors.isNotEmpty && requiredType != null) {
         if (isRelevantType) {
           // Este item ES del tipo requerido, debe tener los colores
-          final hasMentionedColor = item.colors.any((itemColor) => 
-            mentionedColors.any((mentionedColor) => 
-              _colorsMatch(itemColor, mentionedColor)
-            )
+          final hasMentionedColor = item.colors.any(
+            (itemColor) => mentionedColors.any(
+              (mentionedColor) => _colorsMatch(itemColor, mentionedColor),
+            ),
           );
-          
+
           if (!hasMentionedColor) {
             // Si no tiene ninguno de los colores mencionados, EXCLUIR completamente
-            debugPrint('   ❌ Item ${item.id} (${item.type}) excluded: mustInclude requires ${mentionedColors.join(' or ')} ${requiredType} but item has colors: ${item.colors}');
+            debugPrint(
+              '   ❌ Item ${item.id} (${item.type}) excluded: mustInclude requires ${mentionedColors.join(' or ')} $requiredType but item has colors: ${item.colors}',
+            );
             return 0.0;
           } else {
             // Si tiene el color, boost significativo
             score += 0.3;
-            debugPrint('   ✅ Item ${item.id} matches mustInclude: has ${mentionedColors.join(' or ')}');
+            debugPrint(
+              '   ✅ Item ${item.id} matches mustInclude: has ${mentionedColors.join(' or ')}',
+            );
           }
         }
         // Si no es del tipo requerido, no aplicar restricción (puede ser otro tipo de prenda)
       } else if (mentionedColors.isNotEmpty && requiredType == null) {
         // Si menciona colores pero NO un tipo específico, aplicar a todos los items
-        final hasMentionedColor = item.colors.any((itemColor) => 
-          mentionedColors.any((mentionedColor) => 
-            _colorsMatch(itemColor, mentionedColor)
-          )
+        final hasMentionedColor = item.colors.any(
+          (itemColor) => mentionedColors.any(
+            (mentionedColor) => _colorsMatch(itemColor, mentionedColor),
+          ),
         );
-        
+
         if (!hasMentionedColor) {
           // Penalizar fuertemente si no tiene los colores
           score -= 0.3;
@@ -168,7 +197,7 @@ class WardrobeSearchAlgorithm {
     if (intent.constraints?['mustAvoid'] != null) {
       final avoid = intent.constraints!['mustAvoid'].toString().toLowerCase();
       // Si la prenda coincide con lo que se debe evitar, score = 0
-      if (item.subType.toLowerCase().contains(avoid) || 
+      if (item.subType.toLowerCase().contains(avoid) ||
           item.name.toLowerCase().contains(avoid) ||
           item.colors.any((c) => avoid.contains(c.toLowerCase()))) {
         return 0.0; // Excluir completamente
@@ -182,8 +211,8 @@ class WardrobeSearchAlgorithm {
     };
     if (intentStyles.isNotEmpty) {
       final itemStyleTagSet = item.styleTags.toSet();
-      final metaPrimary =
-          item.aiMetadata?.fashionAesthetic?.primary?.toLowerCase();
+      final metaPrimary = item.aiMetadata?.fashionAesthetic?.primary
+          ?.toLowerCase();
       var matches = intentStyles.where(itemStyleTagSet.contains).length;
       if (metaPrimary != null &&
           intentStyles.any((s) => s.toLowerCase() == metaPrimary)) {
@@ -199,7 +228,7 @@ class WardrobeSearchAlgorithm {
           'formal': ['casual', 'sporty'],
           'sporty': ['formal', 'elegant'],
         };
-        
+
         for (final intentTag in intentStyles) {
           if (oppositeStyles[intentTag] != null) {
             for (final itemTag in item.styleTags) {
@@ -215,17 +244,23 @@ class WardrobeSearchAlgorithm {
     // 3. Match de colores (30% del score) - MÁS ESTRICTO
     if (intent.preferredColors.isNotEmpty) {
       final colorMatches = item.colors
-          .where((color) => intent.preferredColors
-              .any((pref) => _colorsMatch(color, pref)))
+          .where(
+            (color) =>
+                intent.preferredColors.any((pref) => _colorsMatch(color, pref)),
+          )
           .length;
       if (colorMatches > 0) {
         score += 0.3 * (colorMatches / intent.preferredColors.length);
-        debugPrint('   ✅ Item ${item.id} color match: ${colorMatches}/${intent.preferredColors.length} colors');
+        debugPrint(
+          '   ✅ Item ${item.id} color match: $colorMatches/${intent.preferredColors.length} colors',
+        );
       } else {
         // Penalización más fuerte si no hay match de colores
         // Si el usuario especificó colores, es importante
         score -= 0.35; // Penalización significativa (pero no tan drástica)
-        debugPrint('   ⚠️ Item ${item.id} penalized: no color match. Item colors: ${item.colors}, Preferred: ${intent.preferredColors}');
+        debugPrint(
+          '   ⚠️ Item ${item.id} penalized: no color match. Item colors: ${item.colors}, Preferred: ${intent.preferredColors}',
+        );
       }
     }
 
@@ -285,12 +320,9 @@ class WardrobeSearchAlgorithm {
   }
 
   /// Calcula compatibilidad entre dos prendas
-  /// 
+  ///
   /// Retorna score de 0.0-1.0 indicando qué tan bien combinan
-  static double calculateCompatibility(
-    WardrobeItem item1,
-    WardrobeItem item2,
-  ) {
+  static double calculateCompatibility(WardrobeItem item1, WardrobeItem item2) {
     double score = 0.5; // Base
 
     // 1. Compatibilidad de colores (40%)
@@ -346,7 +378,8 @@ class WardrobeSearchAlgorithm {
 
         // Colores complementarios
         for (final pair in complementaryPairs) {
-          if ((pair.contains(c1.toLowerCase()) && pair.contains(c2.toLowerCase()))) {
+          if ((pair.contains(c1.toLowerCase()) &&
+              pair.contains(c2.toLowerCase()))) {
             return 0.9; // Colores complementarios combinan muy bien
           }
         }

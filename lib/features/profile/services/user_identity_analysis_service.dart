@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:dio/dio.dart';
@@ -24,10 +23,10 @@ class UserIdentityAnalysisService {
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
     Dio? dio,
-  })  : _aiService = aiService ?? FirebaseAIServiceImpl(),
-        _firestore = firestore ?? FirestoreService.instance,
-        _storage = storage ?? FirebaseStorage.instance,
-        _dio = dio ?? Dio();
+  }) : _aiService = aiService ?? FirebaseAIServiceImpl(),
+       _firestore = firestore ?? FirestoreService.instance,
+       _storage = storage ?? FirebaseStorage.instance,
+       _dio = dio ?? Dio();
 
   static const _identityAnalysisPrompt = '''
 You are a professional biometric and body-proportion analyst for fashion virtual try-on.
@@ -95,7 +94,8 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
 
       await _firestore.collection('users').doc(userId).set({
         'identityProfile': profile.toJson(),
-        'identityVersion': profile.identityVersion ?? IdentityProfile.currentVersion,
+        'identityVersion':
+            profile.identityVersion ?? IdentityProfile.currentVersion,
         'identityCollageUrl': collageUrl,
         'identityGeneratedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -129,9 +129,7 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
   }
 
   List<String> _filterUrls(List<String> urls) {
-    return urls
-        .where((u) => u.isNotEmpty && !u.startsWith('mock://'))
-        .toList();
+    return urls.where((u) => u.isNotEmpty && !u.startsWith('mock://')).toList();
   }
 
   Future<List<File>> _downloadPhotos(
@@ -157,7 +155,8 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
   }
 
   Future<String> _uploadCollage(String userId, List<int> bytes) async {
-    final path = 'users/$userId/identity_collage_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final path =
+        'users/$userId/identity_collage_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child(path);
     final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
     await ref.putData(data, SettableMetadata(contentType: 'image/jpeg'));

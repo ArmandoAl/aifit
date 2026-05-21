@@ -241,17 +241,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         await _loadUserPhotos();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isRegenerate
-                  ? '✅ Imagen base regenerada correctamente'
-                  : '✅ Imagen base generada correctamente',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isRegenerate
+                    ? '✅ Imagen base regenerada correctamente'
+                    : '✅ Imagen base generada correctamente',
+              ),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 3),
             ),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          );
+        }
       }
 
       debugPrint('✅ Base image: $baseImageUrl');
@@ -339,9 +341,9 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final json = const JsonEncoder.withIndent('  ').convert(
-      _identityProfile!.toJson(),
-    );
+    final json = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(_identityProfile!.toJson());
 
     showDialog(
       context: context,
@@ -383,7 +385,7 @@ class _ProfilePageState extends State<ProfilePage> {
         debugPrint('✅ Profile data loaded');
         debugPrint('   bodyPhotos: ${profileData['bodyPhotos']}');
         debugPrint('   facePhotos: ${profileData['facePhotos']}');
-        
+
         setState(() {
           _bodyPhotoUrls.clear();
           _facePhotoUrls.clear();
@@ -395,7 +397,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 .map((url) => url.toString())
                 .where((url) => url.isNotEmpty && !url.startsWith('mock://'))
                 .toList();
-            
+
             debugPrint('📸 Found ${validUrls.length} valid body photo URLs');
             _bodyPhotoUrls.addAll(validUrls);
           } else {
@@ -409,7 +411,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 .map((url) => url.toString())
                 .where((url) => url.isNotEmpty && !url.startsWith('mock://'))
                 .toList();
-            
+
             debugPrint('📸 Found ${validUrls.length} valid face photo URLs');
             _facePhotoUrls.addAll(validUrls);
           } else {
@@ -425,17 +427,20 @@ class _ProfilePageState extends State<ProfilePage> {
             }
           }
 
-          _identityProfile =
-              IdentityProfile.fromFirestoreUser(profileData);
+          _identityProfile = IdentityProfile.fromFirestoreUser(profileData);
           if (_identityProfile!.isEmpty) _identityProfile = null;
 
           final collage = profileData['identityCollageUrl']?.toString();
           _identityCollageUrl =
-              (collage != null && collage.isNotEmpty && !collage.startsWith('mock://'))
-                  ? collage
-                  : null;
-          
-          debugPrint('📊 Total photos loaded: ${_bodyPhotoUrls.length} body, ${_facePhotoUrls.length} face');
+              (collage != null &&
+                  collage.isNotEmpty &&
+                  !collage.startsWith('mock://'))
+              ? collage
+              : null;
+
+          debugPrint(
+            '📊 Total photos loaded: ${_bodyPhotoUrls.length} body, ${_facePhotoUrls.length} face',
+          );
         });
       } else {
         debugPrint('⚠️ No profile data found for user: $userId');
@@ -753,7 +758,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: _deleteBaseImage,
-                                icon: const Icon(Icons.delete_outline, size: 18),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                ),
                                 label: const Text('Eliminar'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.error,
@@ -765,7 +773,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: _showIdentityProfileDialog,
-                                  icon: const Icon(Icons.badge_outlined, size: 18),
+                                  icon: const Icon(
+                                    Icons.badge_outlined,
+                                    size: 18,
+                                  ),
                                   label: const Text('Ver perfil IA'),
                                 ),
                               ),
@@ -802,7 +813,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 24),
 
                 // Generate Base Image Button
-                if (!_isLoadingPhotos && (_bodyPhotoUrls.isNotEmpty || _facePhotoUrls.isNotEmpty))
+                if (!_isLoadingPhotos &&
+                    (_bodyPhotoUrls.isNotEmpty || _facePhotoUrls.isNotEmpty))
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -818,7 +830,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         Row(
                           children: [
                             Icon(
-                              _baseImageUrl != null ? Icons.refresh : Icons.auto_awesome,
+                              _baseImageUrl != null
+                                  ? Icons.refresh
+                                  : Icons.auto_awesome,
                               color: AppColors.secondary,
                               size: 24,
                             ),
@@ -851,8 +865,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed:
-                                _isGeneratingBaseImage ? null : _generateOrRegenerateBaseImage,
+                            onPressed: _isGeneratingBaseImage
+                                ? null
+                                : _generateOrRegenerateBaseImage,
                             icon: _isGeneratingBaseImage
                                 ? const SizedBox(
                                     width: 20,
@@ -864,13 +879,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ),
                                     ),
                                   )
-                                : Icon(_baseImageUrl != null ? Icons.refresh : Icons.auto_awesome),
+                                : Icon(
+                                    _baseImageUrl != null
+                                        ? Icons.refresh
+                                        : Icons.auto_awesome,
+                                  ),
                             label: Text(
                               _isGeneratingBaseImage
                                   ? 'Generating...'
                                   : _baseImageUrl != null
-                                      ? 'Regenerate Base Image'
-                                      : 'Generate Base Image',
+                                  ? 'Regenerate Base Image'
+                                  : 'Generate Base Image',
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,

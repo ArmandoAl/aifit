@@ -1,12 +1,24 @@
-import '../../../core/utils/mock_data.dart';
+import '../domain/chat_models.dart';
+import '../domain/stylist_intent_state.dart';
 
-class StylistRepository {
-  Future<Map<String, dynamic>> sendPrompt(String prompt) async {
-    // 1. Simular "Thinking..." de la IA
-    await Future.delayed(const Duration(seconds: 2));
+class StylistChatTurn {
+  final String assistantMessage;
+  final StylistIntentState intentState;
+  final bool readyToGenerate;
 
-    // 2. Devolver siempre la respuesta exitosa definida en MockData
-    // En una app real, aquí llamarías a tu Backend Python/OpenAI
-    return MockData.generatedOutfitResponse;
-  }
+  const StylistChatTurn({
+    required this.assistantMessage,
+    required this.intentState,
+    this.readyToGenerate = false,
+  });
+}
+
+abstract class StylistRepository {
+  Future<StylistChatTurn> sendMessage({
+    required String userMessage,
+    required List<ChatMessage> history,
+    required StylistIntentState currentIntent,
+  });
+
+  StylistChatTurn welcomeMessage();
 }

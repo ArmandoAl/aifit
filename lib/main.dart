@@ -9,7 +9,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/wardrobe/presentation/bloc/wardrobe_bloc.dart';
 import 'features/wardrobe/data/wardrobe_repository_impl.dart';
 import 'features/stylist/presentation/bloc/chat_bloc.dart';
-import 'features/stylist/data/stylist_repository.dart';
+import 'features/stylist/data/stylist_repository_impl.dart';
 import 'features/outfit/presentation/bloc/outfit_generation_bloc.dart';
 import 'features/outfit/presentation/bloc/saved_outfits_bloc.dart';
 
@@ -38,7 +38,8 @@ class AIFitApp extends StatelessWidget {
           ),
         ),
         BlocProvider(
-          create: (context) => ChatBloc(repository: StylistRepository()),
+          create: (context) =>
+              ChatBloc(repository: StylistRepositoryImpl()),
         ),
         BlocProvider(
           create: (context) => OutfitGenerationBloc(),

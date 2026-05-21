@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -74,7 +73,7 @@ class WardrobePage extends StatelessWidget {
                     // Capture NavigatorState before popping the modal
                     final navigator = Navigator.of(context);
                     navigator.pop();
-                    
+
                     debugPrint('📸 Opening image picker...');
                     final picker = ImagePicker();
                     final List<XFile> images = await picker.pickMultiImage(
@@ -83,12 +82,16 @@ class WardrobePage extends StatelessWidget {
 
                     debugPrint('📸 Selected ${images.length} images');
                     if (images.isNotEmpty) {
-                      debugPrint('📸 Navigating to AddWardrobeItemPage with ${images.length} images');
+                      debugPrint(
+                        '📸 Navigating to AddWardrobeItemPage with ${images.length} images',
+                      );
                       // Use the captured navigator instead of context
                       navigator.push(
                         MaterialPageRoute(
                           builder: (context) => AddWardrobeItemPage(
-                            initialImages: images.map((x) => File(x.path)).toList(),
+                            initialImages: images
+                                .map((x) => File(x.path))
+                                .toList(),
                           ),
                         ),
                       );
@@ -121,7 +124,7 @@ class WardrobePage extends StatelessWidget {
                     // Capture NavigatorState before popping the modal
                     final navigator = Navigator.of(context);
                     navigator.pop();
-                    
+
                     final picker = ImagePicker();
                     final XFile? image = await picker.pickImage(
                       source: ImageSource.camera,

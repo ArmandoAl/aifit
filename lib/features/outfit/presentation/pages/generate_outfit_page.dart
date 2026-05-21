@@ -6,7 +6,6 @@ import '../bloc/outfit_generation_bloc.dart';
 import '../bloc/outfit_generation_event.dart';
 import '../bloc/outfit_generation_state.dart';
 import '../../domain/outfit_models.dart';
-import '../../../simulation/presentation/pages/outfit_result_page.dart';
 import '../../../stylist/domain/chat_models.dart' as chat_models;
 
 /// Página para generar outfits usando IA
@@ -40,11 +39,11 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
     }
 
     context.read<OutfitGenerationBloc>().add(
-          GenerateOutfitsRequested(
-            userPrompt: prompt,
-            generateImage: _generateImage,
-          ),
-        );
+      GenerateOutfitsRequested(
+        userPrompt: prompt,
+        generateImage: _generateImage,
+      ),
+    );
   }
 
   @override
@@ -78,7 +77,9 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             if (state.outfits.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('No outfits could be generated. Try a different description.'),
+                  content: Text(
+                    'No outfits could be generated. Try a different description.',
+                  ),
                   backgroundColor: AppColors.error,
                 ),
               );
@@ -95,18 +96,12 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                   // Header
                   const Text(
                     'Describe the outfit you want',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Tell us what kind of outfit you\'re looking for. For example: "casual outfit for the weekend" or "formal look for a wedding"',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
 
@@ -149,7 +144,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                                 _generateImage = value;
                               });
                             },
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -167,7 +162,9 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Icon(Icons.auto_awesome),
@@ -225,10 +222,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
         const SizedBox(height: 16),
         Text(
           _getLoadingText(state),
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
         ),
       ],
     );
@@ -240,10 +234,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
       children: [
         const Text(
           'Generated Outfits',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ...state.outfits.asMap().entries.map((entry) {
@@ -324,11 +315,11 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             const SizedBox(height: 16),
 
             // Try-On Image (si existe)
-            if (tryOnImageUrl != null && tryOnImageUrl!.isNotEmpty) ...[
+            if (tryOnImageUrl != null && tryOnImageUrl.isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  tryOnImageUrl!,
+                  tryOnImageUrl,
                   width: double.infinity,
                   height: 300,
                   fit: BoxFit.cover,
@@ -337,9 +328,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                     return Container(
                       height: 300,
                       color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: const Center(child: CircularProgressIndicator()),
                     );
                   },
                   errorBuilder: (context, error, stackTrace) {
@@ -357,20 +346,14 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             ],
 
             // Explanation
-            Text(
-              outfit.explanation,
-              style: const TextStyle(fontSize: 14),
-            ),
+            Text(outfit.explanation, style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 16),
 
             // Items
             if (outfit.itemIds.isNotEmpty) ...[
               const Text(
                 'Items:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               const SizedBox(height: 8),
               Wrap(

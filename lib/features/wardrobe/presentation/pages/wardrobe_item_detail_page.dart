@@ -13,8 +13,8 @@ import '../../domain/wardrobe_palette.dart';
 import '../../data/wardrobe_repository_impl.dart';
 import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
-import '../../../stylist/data/stylist_repository_impl.dart';
 import '../../../stylist/domain/chat_models.dart';
+import '../../../outfit/services/outfit_service.dart';
 import '../../../simulation/presentation/pages/outfit_result_page.dart';
 
 class WardrobeItemDetailPage extends StatefulWidget {
@@ -28,20 +28,20 @@ class WardrobeItemDetailPage extends StatefulWidget {
 
 class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
   final WardrobeRepositoryImpl _repository = WardrobeRepositoryImpl();
-  final StylistRepositoryImpl _stylistRepository = StylistRepositoryImpl();
+  final OutfitService _outfitService = OutfitService();
   final FirebaseAIServiceImpl _aiService = FirebaseAIServiceImpl();
   final Dio _dio = Dio();
-  
+
   late WardrobeItem _currentItem;
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isGeneratingOutfit = false;
   bool _isAnalyzing = false;
-  
+
   // Form controllers
   final _brandController = TextEditingController();
   final _outfitPromptController = TextEditingController();
-  
+
   // Available options
   List<String> get _paletteColors => WardrobePalette.standardColors;
   List<String> get _paletteStyleTags => WardrobePalette.standardStyleTags;
@@ -78,7 +78,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
 
     try {
       await _repository.updateWardrobeItem(_currentItem);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -86,10 +86,10 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
             backgroundColor: AppColors.success,
           ),
         );
-        
+
         // Reload wardrobe items
         context.read<WardrobeBloc>().add(const WardrobeLoadRequested());
-        
+
         setState(() {
           _isEditing = false;
         });
@@ -128,20 +128,35 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
     });
 
     try {
-      final prompt = "Create an outfit using this ${_currentItem.subType} (${_currentItem.type}). ${_outfitPromptController.text.trim()}";
-      
-      final outfitData = await _stylistRepository.generateOutfitWithItem(
-        itemId: _currentItem.id,
+      final prompt =
+          'Create an outfit that must include wardrobe item id ${_currentItem.id} '
+          '(${_currentItem.subType}, ${_currentItem.type}). '
+          '${_outfitPromptController.text.trim()}';
+
+      final result = await _outfitService.generateCompleteOutfit(
         userPrompt: prompt,
+        generateImage: true,
       );
 
+      if (result.outfits.isEmpty) {
+        throw Exception(
+          'Could not build an outfit with your current wardrobe.',
+        );
+      }
+
+      final pipelineOutfit = result.outfits.first;
+      final imageUrl = result.getImageUrlForOutfit(pipelineOutfit.id) ?? '';
+
       if (mounted) {
-        final outfit = GeneratedOutfit.fromJson(outfitData);
+        final outfit = GeneratedOutfit(
+          id: pipelineOutfit.id,
+          imageUrl: imageUrl,
+          matchPercentage: pipelineOutfit.matchPercentage,
+          itemIds: pipelineOutfit.itemIds,
+        );
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => OutfitResultPage(
-              outfit: outfit,
-            ),
+            builder: (context) => OutfitResultPage(outfit: outfit),
           ),
         );
       }
@@ -208,13 +223,15 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       // 1. Download image from URL
       debugPrint('📥 Downloading image from: ${_currentItem.imageUrl}');
       final tempDir = await getTemporaryDirectory();
-      final imageFile = File('${tempDir.path}/analyze_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      
+      final imageFile = File(
+        '${tempDir.path}/analyze_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
       final response = await _dio.get(
         _currentItem.imageUrl,
         options: Options(responseType: ResponseType.bytes),
       );
-      
+
       await imageFile.writeAsBytes(response.data);
       debugPrint('✅ Image downloaded to: ${imageFile.path}');
 
@@ -263,7 +280,10 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       _brandController.text = _currentItem.brand ?? '';
 
       // 6. Reload wardrobe
-      context.read<WardrobeBloc>().add(const WardrobeLoadRequested());
+      if (mounted) {
+        debugPrint('Reloading wardrobe');
+        context.read<WardrobeBloc>().add(const WardrobeLoadRequested());
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -364,10 +384,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   const SizedBox(height: 4),
                   Text(
                     '${_currentItem.type} • ${_currentItem.subType}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
 
@@ -408,10 +425,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                           const SizedBox(height: 8),
                           const Text(
                             'Analyze this item with AI to automatically detect colors, style tags, and season.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
                           SizedBox(
@@ -424,9 +438,10 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
                                       ),
                                     )
                                   : const Icon(Icons.auto_awesome),
@@ -438,7 +453,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.secondary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),
@@ -465,7 +482,8 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                     ),
                     const SizedBox(height: 24),
                   ] else ...[
-                    if (_currentItem.brand != null && _currentItem.brand!.isNotEmpty)
+                    if (_currentItem.brand != null &&
+                        _currentItem.brand!.isNotEmpty)
                       _InfoRow(
                         icon: Icons.label_outline,
                         label: 'Brand',
@@ -474,10 +492,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   ],
 
                   // Colors Section
-                  _SectionTitle(
-                    title: 'Colors',
-                    isEditing: _isEditing,
-                  ),
+                  _SectionTitle(title: 'Colors', isEditing: _isEditing),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -491,8 +506,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                           onSelected: _isEditing
                               ? (_) => _toggleColor(color)
                               : null,
-                          selectedColor:
-                              AppColors.primary.withValues(alpha: 0.2),
+                          selectedColor: AppColors.primary.withValues(
+                            alpha: 0.2,
+                          ),
                           checkmarkColor: AppColors.primary,
                           backgroundColor: Colors.white,
                           side: BorderSide(
@@ -509,8 +525,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                           onSelected: _isEditing
                               ? (_) => _toggleColor(color)
                               : null,
-                          selectedColor:
-                              AppColors.secondary.withValues(alpha: 0.2),
+                          selectedColor: AppColors.secondary.withValues(
+                            alpha: 0.2,
+                          ),
                           checkmarkColor: AppColors.secondary,
                           backgroundColor: Colors.white,
                           side: BorderSide(
@@ -523,26 +540,23 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   const SizedBox(height: 24),
 
                   // Style Tags Section
-                  _SectionTitle(
-                    title: 'Style Tags',
-                    isEditing: _isEditing,
-                  ),
+                  _SectionTitle(title: 'Style Tags', isEditing: _isEditing),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       ..._paletteStyleTags.map((tag) {
-                        final isSelected =
-                            _currentItem.styleTags.contains(tag);
+                        final isSelected = _currentItem.styleTags.contains(tag);
                         return FilterChip(
                           label: Text(tag),
                           selected: isSelected,
                           onSelected: _isEditing
                               ? (_) => _toggleStyleTag(tag)
                               : null,
-                          selectedColor:
-                              AppColors.primary.withValues(alpha: 0.2),
+                          selectedColor: AppColors.primary.withValues(
+                            alpha: 0.2,
+                          ),
                           checkmarkColor: AppColors.primary,
                           backgroundColor: Colors.white,
                           side: BorderSide(
@@ -559,8 +573,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                           onSelected: _isEditing
                               ? (_) => _toggleStyleTag(tag)
                               : null,
-                          selectedColor:
-                              AppColors.secondary.withValues(alpha: 0.2),
+                          selectedColor: AppColors.secondary.withValues(
+                            alpha: 0.2,
+                          ),
                           checkmarkColor: AppColors.secondary,
                           backgroundColor: Colors.white,
                         );
@@ -570,10 +585,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   const SizedBox(height: 24),
 
                   // Season Section
-                  _SectionTitle(
-                    title: 'Season',
-                    isEditing: _isEditing,
-                  ),
+                  _SectionTitle(title: 'Season', isEditing: _isEditing),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -583,7 +595,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       return FilterChip(
                         label: Text(season),
                         selected: isSelected,
-                        onSelected: _isEditing 
+                        onSelected: _isEditing
                             ? (selected) {
                                 _toggleSeason(season);
                               }
@@ -592,8 +604,8 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                         checkmarkColor: AppColors.primary,
                         backgroundColor: Colors.white,
                         side: BorderSide(
-                          color: isSelected 
-                              ? AppColors.primary 
+                          color: isSelected
+                              ? AppColors.primary
                               : Colors.grey.shade300,
                         ),
                       );
@@ -616,7 +628,8 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                     TextField(
                       controller: _outfitPromptController,
                       decoration: InputDecoration(
-                        labelText: 'Instructions (e.g., "casual day out", "formal event")',
+                        labelText:
+                            'Instructions (e.g., "casual day out", "formal event")',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.auto_awesome),
                         suffixIcon: IconButton(
@@ -624,10 +637,14 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.send),
-                          onPressed: _isGeneratingOutfit ? null : _generateOutfit,
+                          onPressed: _isGeneratingOutfit
+                              ? null
+                              : _generateOutfit,
                         ),
                       ),
                       maxLines: 3,
@@ -669,10 +686,7 @@ class _SectionTitle extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         if (isEditing) ...[
           const SizedBox(width: 8),
@@ -711,17 +725,11 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '$label: ',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),

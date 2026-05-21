@@ -3,7 +3,6 @@ import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../../wardrobe/data/wardrobe_repository_impl.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/domain/user_identity_profile.dart';
@@ -32,7 +31,8 @@ class OutfitService {
   final OutfitGeneratorService _outfitGenerator = OutfitGeneratorService();
   final VirtualTryOnService _tryOnService = VirtualTryOnService();
   final UserBaseImageService _baseImageService = UserBaseImageService();
-  final SavedOutfitsRepository _savedOutfitsRepository = SavedOutfitsRepository();
+  final SavedOutfitsRepository _savedOutfitsRepository =
+      SavedOutfitsRepository();
 
   /// Flujo completo: Genera outfits y opcionalmente imagen de Virtual Try-On
   ///
@@ -168,12 +168,7 @@ class OutfitService {
       }
 
       // Guardar outfits en Firestore con etiquetas y metadata
-      await _saveOutfitsToFirestore(
-        uid,
-        validOutfits,
-        intent,
-        tryOnImageUrls,
-      );
+      await _saveOutfitsToFirestore(uid, validOutfits, intent, tryOnImageUrls);
 
       return OutfitGenerationResult(
         outfits: validOutfits,
@@ -225,24 +220,20 @@ class OutfitService {
       final profileData = await _profileRepository.getUserProfile(userId);
       if (profileData == null) return const _UserTryOnContext();
 
-      final identityProfile =
-          IdentityProfile.fromFirestoreUser(profileData);
+      final identityProfile = IdentityProfile.fromFirestoreUser(profileData);
 
       final bodyPhoto = profileData['bodyPhotos'] != null
-          ? (profileData['bodyPhotos'] as List<dynamic>).firstOrNull
-                ?.toString()
+          ? (profileData['bodyPhotos'] as List<dynamic>).firstOrNull?.toString()
           : null;
 
       final facePhoto = profileData['facePhotos'] != null
-          ? (profileData['facePhotos'] as List<dynamic>).firstOrNull
-                ?.toString()
+          ? (profileData['facePhotos'] as List<dynamic>).firstOrNull?.toString()
           : null;
 
       return _UserTryOnContext(
         bodyPhotoUrl: bodyPhoto,
         facePhotoUrl: facePhoto,
-        identityProfile:
-            identityProfile.isEmpty ? null : identityProfile,
+        identityProfile: identityProfile.isEmpty ? null : identityProfile,
       );
     } catch (e) {
       debugPrint('⚠️ Failed to get user try-on context: $e');
@@ -258,7 +249,9 @@ class OutfitService {
     Map<String, String> tryOnImageUrls,
   ) async {
     try {
-      debugPrint('💾 Saving ${outfits.length} outfits to Firestore with tags...');
+      debugPrint(
+        '💾 Saving ${outfits.length} outfits to Firestore with tags...',
+      );
 
       final savedOutfits = <SavedOutfit>[];
 
@@ -280,7 +273,9 @@ class OutfitService {
       // Guardar en batch
       await _savedOutfitsRepository.saveOutfits(savedOutfits);
 
-      debugPrint('✅ Saved ${savedOutfits.length} outfits to Firestore with tags');
+      debugPrint(
+        '✅ Saved ${savedOutfits.length} outfits to Firestore with tags',
+      );
     } catch (e) {
       debugPrint('⚠️ Failed to save outfits to Firestore: $e');
       // No lanzar error - es opcional, pero loguear para debugging

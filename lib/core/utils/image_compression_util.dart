@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -35,10 +34,10 @@ class ImageCompressionUtil {
 
   static Future<Uint8List> compressIdentityBytes(Uint8List bytes) async {
     if (bytes.isEmpty) return bytes;
-    return compute(_encodeInIsolate, _EncodeParams(
-      bytes: bytes,
-      payload: AiImagePayload.identity,
-    ));
+    return compute(
+      _encodeInIsolate,
+      _EncodeParams(bytes: bytes, payload: AiImagePayload.identity),
+    );
   }
 
   static Future<Uint8List> compress(
@@ -49,7 +48,10 @@ class ImageCompressionUtil {
       return file.readAsBytes();
     }
     final bytes = await file.readAsBytes();
-    return compute(_encodeInIsolate, _EncodeParams(bytes: bytes, payload: payload));
+    return compute(
+      _encodeInIsolate,
+      _EncodeParams(bytes: bytes, payload: payload),
+    );
   }
 }
 
@@ -70,12 +72,18 @@ Uint8List _encodeInIsolate(_EncodeParams params) {
       case AiImagePayload.garment:
         final resized = _resizeGarment(image);
         return Uint8List.fromList(
-          img.encodeJpg(resized, quality: ImageCompressionUtil.garmentJpegQuality),
+          img.encodeJpg(
+            resized,
+            quality: ImageCompressionUtil.garmentJpegQuality,
+          ),
         );
       case AiImagePayload.identity:
         final resized = _resizeIdentity(image);
         return Uint8List.fromList(
-          img.encodeJpg(resized, quality: ImageCompressionUtil.identityJpegQuality),
+          img.encodeJpg(
+            resized,
+            quality: ImageCompressionUtil.identityJpegQuality,
+          ),
         );
       case AiImagePayload.raw:
         return params.bytes;

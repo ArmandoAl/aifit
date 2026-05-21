@@ -7,6 +7,10 @@ abstract class ChatEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class ChatSessionStarted extends ChatEvent {
+  const ChatSessionStarted();
+}
+
 class ChatMessageSent extends ChatEvent {
   final String text;
 
@@ -14,4 +18,13 @@ class ChatMessageSent extends ChatEvent {
 
   @override
   List<Object?> get props => [text];
+}
+
+class ChatGenerateOutfitRequested extends ChatEvent {
+  final bool generateTryOn;
+
+  const ChatGenerateOutfitRequested({this.generateTryOn = true});
+
+  @override
+  List<Object?> get props => [generateTryOn];
 }
