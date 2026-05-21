@@ -58,6 +58,35 @@ class SavedOutfit {
     this.notes,
   });
 
+  /// Try-on guardado solo en Storage (antes de Firestore o si falló el guardado).
+  factory SavedOutfit.fromStorageTryOn({
+    required String userId,
+    required String tryOnImageUrl,
+    required String storageFileName,
+    required DateTime createdAt,
+  }) {
+    final storageId = storageFileName.replaceAll('.jpg', '');
+    final emptyOutfit = GeneratedOutfit(
+      id: storageId,
+      matchPercentage: 0,
+      explanation: 'Saved try-on look',
+      compatibilityScore: 0,
+    );
+    return SavedOutfit(
+      id: 'storage_$storageId',
+      userId: userId,
+      tryOnImageUrl: tryOnImageUrl,
+      outfit: emptyOutfit,
+      intent: OutfitIntent(userPrompt: ''),
+      colors: const [],
+      styleTags: const [],
+      matchPercentage: 0,
+      compatibilityScore: 0,
+      userPrompt: '',
+      createdAt: createdAt,
+    );
+  }
+
   /// Crea un SavedOutfit desde un GeneratedOutfit e Intent
   factory SavedOutfit.fromGeneratedOutfit({
     required GeneratedOutfit outfit,
@@ -66,7 +95,7 @@ class SavedOutfit {
     required String tryOnImageUrl,
   }) {
     return SavedOutfit(
-      id: '${outfit.id}_${DateTime.now().millisecondsSinceEpoch}',
+      id: outfit.id,
       userId: userId,
       tryOnImageUrl: tryOnImageUrl,
       outfit: outfit,

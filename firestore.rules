@@ -42,7 +42,11 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.userId == request.auth.uid;
 
-      allow read: if signedIn()
+      allow get: if signedIn()
+        && resource.data.userId == request.auth.uid;
+
+      // Queries: .where('userId', isEqualTo: uid).orderBy('createdAt')
+      allow list: if signedIn()
         && resource.data.userId == request.auth.uid;
 
       allow update, delete: if signedIn()

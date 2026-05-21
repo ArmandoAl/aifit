@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/firestore_service.dart';
 import '../domain/saved_outfit_model.dart';
 
-/// Repository para gestionar outfits guardados en Firestore
+/// Repository para outfits guardados (Firestore + fallback Storage).
 class SavedOutfitsRepository {
   final FirebaseFirestore _firestore = FirestoreService.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   /// Guarda un outfit en Firestore
   Future<void> saveOutfit(SavedOutfit savedOutfit) async {
@@ -46,7 +48,7 @@ class SavedOutfitsRepository {
     }
   }
 
-  /// Obtiene todos los outfits del usuario
+  /// Obtiene outfits: Firestore primero; completa con imágenes try-on en Storage.
   Future<List<SavedOutfit>> getSavedOutfits({
     String? filterByOccasion,
     String? filterBySeason,
@@ -54,64 +56,201 @@ class SavedOutfitsRepository {
     List<String>? filterByStyleTags,
     bool? onlyFavorites,
   }) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      debugPrint('⚠️ No user logged in');
+      return [];
+    }
+
+    debugPrint('📦 Loading saved outfits for user: $userId');
+
     try {
-      final userId = _auth.currentUser?.uid;
-      if (userId == null) {
-        debugPrint('⚠️ No user logged in');
-        return [];
+      var firestoreOutfits = await _loadFromFirestore(
+        userId: userId,
+        filterByOccasion: filterByOccasion,
+        filterBySeason: filterBySeason,
+        onlyFavorites: onlyFavorites,
+      );
+
+      firestoreOutfits = _applyClientFilters(
+        firestoreOutfits,
+        filterByColors: filterByColors,
+        filterByStyleTags: filterByStyleTags,
+      );
+
+      debugPrint('📄 Firestore: ${firestoreOutfits.length} outfits');
+
+      // Sin filtros de Firestore: incluir try-ons que solo existen en Storage
+      final canMergeStorage = filterByOccasion == null &&
+          filterBySeason == null &&
+          onlyFavorites != true;
+
+      if (!canMergeStorage) {
+        debugPrint('✅ Loaded ${firestoreOutfits.length} saved outfits');
+        return firestoreOutfits;
       }
 
-      debugPrint('📦 Loading saved outfits for user: $userId');
+      final storageOutfits = await _loadFromStorage(userId);
+      debugPrint('🗄️ Storage try-ons: ${storageOutfits.length} images');
 
-      Query query = _firestore
-          .collection('saved_outfits')
-          .where('userId', isEqualTo: userId);
+      final merged = _mergeFirestoreAndStorage(
+        firestoreOutfits,
+        storageOutfits,
+      );
 
-      // Aplicar filtros
-      if (filterByOccasion != null) {
-        query = query.where('occasion', isEqualTo: filterByOccasion);
+      await _backfillStorageOnlyToFirestore(merged);
+
+      debugPrint('✅ Loaded ${merged.length} saved outfits (merged)');
+      return merged;
+    } catch (e, stack) {
+      debugPrint('❌ Error loading saved outfits: $e');
+      debugPrint('$stack');
+
+      // Si Firestore falla, al menos mostrar lo que hay en Storage
+      try {
+        final storageOnly = await _loadFromStorage(userId);
+        debugPrint(
+          '⚠️ Fallback: returning ${storageOnly.length} outfits from Storage',
+        );
+        return _applyClientFilters(
+          storageOnly,
+          filterByColors: filterByColors,
+          filterByStyleTags: filterByStyleTags,
+        );
+      } catch (storageError) {
+        debugPrint('❌ Storage fallback failed: $storageError');
+        rethrow;
+      }
+    }
+  }
+
+  Future<List<SavedOutfit>> _loadFromFirestore({
+    required String userId,
+    String? filterByOccasion,
+    String? filterBySeason,
+    bool? onlyFavorites,
+  }) async {
+    Query query = _firestore
+        .collection('saved_outfits')
+        .where('userId', isEqualTo: userId);
+
+    if (filterByOccasion != null) {
+      query = query.where('occasion', isEqualTo: filterByOccasion);
+    }
+    if (filterBySeason != null) {
+      query = query.where('season', isEqualTo: filterBySeason);
+    }
+    if (onlyFavorites == true) {
+      query = query.where('isFavorite', isEqualTo: true);
+    }
+
+    query = query.orderBy('createdAt', descending: true);
+
+    final snapshot = await query.get();
+
+    return snapshot.docs
+        .map(
+          (doc) => SavedOutfit.fromJson({
+            ...doc.data() as Map<String, dynamic>,
+            'id': doc.id,
+          }),
+        )
+        .toList();
+  }
+
+  Future<List<SavedOutfit>> _loadFromStorage(String userId) async {
+    try {
+      final ref = _storage.ref('users/$userId/outfits');
+      final listResult = await ref.listAll();
+      final outfits = <SavedOutfit>[];
+
+      for (final item in listResult.items) {
+        if (!item.name.startsWith('tryon_')) continue;
+
+        final url = await item.getDownloadURL();
+        final createdAt = _parseTryOnCreatedAt(item.name);
+
+        outfits.add(
+          SavedOutfit.fromStorageTryOn(
+            userId: userId,
+            tryOnImageUrl: url,
+            storageFileName: item.name,
+            createdAt: createdAt,
+          ),
+        );
       }
 
-      if (filterBySeason != null) {
-        query = query.where('season', isEqualTo: filterBySeason);
-      }
-
-      if (onlyFavorites == true) {
-        query = query.where('isFavorite', isEqualTo: true);
-      }
-
-      // Ordenar por fecha de creación (más recientes primero)
-      query = query.orderBy('createdAt', descending: true);
-
-      final snapshot = await query.get();
-
-      var outfits = snapshot.docs
-          .map(
-            (doc) => SavedOutfit.fromJson({
-              ...doc.data() as Map<String, dynamic>,
-              'id': doc.id,
-            }),
-          )
-          .toList();
-
-      // Filtros que no se pueden hacer en Firestore (arrays)
-      if (filterByColors != null && filterByColors.isNotEmpty) {
-        outfits = outfits.where((outfit) {
-          return outfit.colors.any((color) => filterByColors.contains(color));
-        }).toList();
-      }
-
-      if (filterByStyleTags != null && filterByStyleTags.isNotEmpty) {
-        outfits = outfits.where((outfit) {
-          return outfit.styleTags.any((tag) => filterByStyleTags.contains(tag));
-        }).toList();
-      }
-
-      debugPrint('✅ Loaded ${outfits.length} saved outfits');
+      outfits.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return outfits;
     } catch (e) {
-      debugPrint('❌ Error loading saved outfits: $e');
+      debugPrint('⚠️ Could not list Storage outfits: $e');
       return [];
+    }
+  }
+
+  DateTime _parseTryOnCreatedAt(String fileName) {
+    final match = RegExp(r'tryon_(\d+)').firstMatch(fileName);
+    if (match != null) {
+      final ms = int.tryParse(match.group(1)!);
+      if (ms != null) {
+        return DateTime.fromMillisecondsSinceEpoch(ms);
+      }
+    }
+    return DateTime.now();
+  }
+
+  List<SavedOutfit> _mergeFirestoreAndStorage(
+    List<SavedOutfit> firestore,
+    List<SavedOutfit> storage,
+  ) {
+    final knownUrls = firestore.map((o) => o.tryOnImageUrl).toSet();
+    final merged = List<SavedOutfit>.from(firestore);
+
+    for (final item in storage) {
+      if (item.tryOnImageUrl.isEmpty) continue;
+      if (knownUrls.contains(item.tryOnImageUrl)) continue;
+      merged.add(item);
+      knownUrls.add(item.tryOnImageUrl);
+    }
+
+    merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return merged;
+  }
+
+  List<SavedOutfit> _applyClientFilters(
+    List<SavedOutfit> outfits, {
+    List<String>? filterByColors,
+    List<String>? filterByStyleTags,
+  }) {
+    var result = outfits;
+    if (filterByColors != null && filterByColors.isNotEmpty) {
+      result = result
+          .where(
+            (o) => o.colors.any((c) => filterByColors.contains(c)),
+          )
+          .toList();
+    }
+    if (filterByStyleTags != null && filterByStyleTags.isNotEmpty) {
+      result = result
+          .where(
+            (o) => o.styleTags.any((t) => filterByStyleTags.contains(t)),
+          )
+          .toList();
+    }
+    return result;
+  }
+
+  /// Migra try-ons de Storage que aún no tienen documento en Firestore.
+  Future<void> _backfillStorageOnlyToFirestore(List<SavedOutfit> merged) async {
+    final toBackfill =
+        merged.where((o) => o.id.startsWith('storage_')).toList();
+    if (toBackfill.isEmpty) return;
+
+    debugPrint('🔄 Backfilling ${toBackfill.length} outfits to Firestore...');
+    try {
+      await saveOutfits(toBackfill);
+    } catch (e) {
+      debugPrint('⚠️ Backfill skipped: $e');
     }
   }
 
@@ -181,7 +320,6 @@ class SavedOutfitsRepository {
       }
     } catch (e) {
       debugPrint('⚠️ Error incrementing view count: $e');
-      // No lanzar error, es opcional
     }
   }
 

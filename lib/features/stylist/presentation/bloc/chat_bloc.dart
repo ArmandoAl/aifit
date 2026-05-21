@@ -139,21 +139,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final loaded = state as ChatLoaded;
       var resultMessages = _withoutLoading(loaded.messages);
 
-      for (final outfit in result.outfits) {
-        final tryOnUrl = result.tryOnImageUrls[outfit.id] ??
-            result.tryOnImageUrl;
-        resultMessages = [
-          ...resultMessages,
-          ChatMessage.outfit(
-            ChatOutfitPreview(
-              outfit: outfit,
-              tryOnImageUrl: tryOnUrl,
-              explanation: outfit.explanation,
-            ),
-          ),
-        ];
-      }
-
       if (result.outfits.isEmpty) {
         resultMessages = [
           ...resultMessages,
@@ -168,6 +153,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             "Here are your curated looks — tap any card to see details.",
           ),
         ];
+
+        for (final outfit in result.outfits) {
+          final tryOnUrl =
+              result.tryOnImageUrls[outfit.id] ?? result.tryOnImageUrl;
+          resultMessages = [
+            ...resultMessages,
+            ChatMessage.outfit(
+              ChatOutfitPreview(
+                outfit: outfit,
+                tryOnImageUrl: tryOnUrl,
+                explanation: outfit.explanation,
+              ),
+            ),
+          ];
+        }
       }
 
       emit(

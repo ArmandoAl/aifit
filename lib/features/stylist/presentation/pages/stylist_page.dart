@@ -9,8 +9,22 @@ import '../../domain/chat_models.dart';
 import '../widgets/stylist_chat_bubble.dart';
 import '../widgets/stylist_generate_cta_card.dart';
 import '../widgets/stylist_generation_loading_card.dart';
+import '../widgets/stylist_outfit_carousel.dart';
 import '../widgets/stylist_outfit_preview_card.dart';
 import '../widgets/stylist_typing_indicator.dart';
+
+/// Ítem normalizado para el ListView del chat (agrupa outfits en carrusel).
+sealed class _ChatListEntry {}
+
+class _ChatMessageEntry extends _ChatListEntry {
+  final ChatMessage message;
+  _ChatMessageEntry(this.message);
+}
+
+class _ChatOutfitCarouselEntry extends _ChatListEntry {
+  final List<ChatOutfitPreview> previews;
+  _ChatOutfitCarouselEntry(this.previews);
+}
 
 class StylistPage extends StatefulWidget {
   const StylistPage({super.key});
@@ -75,9 +89,32 @@ class _StylistPageState extends State<StylistPage> {
     );
   }
 
+  List<_ChatListEntry> _normalizeMessages(List<ChatMessage> messages) {
+    final entries = <_ChatListEntry>[];
+    var i = 0;
+    while (i < messages.length) {
+      final msg = messages[i];
+      if (msg.type == ChatMessageType.outfitPreview &&
+          msg.outfitPreview != null) {
+        final group = <ChatOutfitPreview>[];
+        while (i < messages.length &&
+            messages[i].type == ChatMessageType.outfitPreview &&
+            messages[i].outfitPreview != null) {
+          group.add(messages[i].outfitPreview!);
+          i++;
+        }
+        entries.add(_ChatOutfitCarouselEntry(group));
+      } else {
+        entries.add(_ChatMessageEntry(msg));
+        i++;
+      }
+    }
+    return entries;
+  }
+
   Widget _buildScaffold(BuildContext context, ChatLoaded state) {
-    final itemCount =
-        state.messages.length + (state.isTyping ? 1 : 0);
+    final entries = _normalizeMessages(state.messages);
+    final itemCount = entries.length + (state.isTyping ? 1 : 0);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -153,14 +190,14 @@ class _StylistPageState extends State<StylistPage> {
               padding: const EdgeInsets.only(top: 12, bottom: 12),
               itemCount: itemCount,
               itemBuilder: (context, index) {
-                if (state.isTyping && index == state.messages.length) {
+                if (state.isTyping && index == entries.length) {
                   return const StylistTypingIndicator();
                 }
-                final msg = state.messages[index];
+                final entry = entries[index];
                 return _AnimatedMessage(
-                  key: ValueKey(msg.id),
+                  key: ValueKey(_entryKey(entry, index)),
                   index: index,
-                  child: _buildMessage(context, msg, state),
+                  child: _buildEntry(context, entry, state),
                 );
               },
             ),
@@ -169,6 +206,28 @@ class _StylistPageState extends State<StylistPage> {
         ],
       ),
     );
+  }
+
+  String _entryKey(_ChatListEntry entry, int index) {
+    return switch (entry) {
+      _ChatMessageEntry(:final message) => message.id,
+      _ChatOutfitCarouselEntry(:final previews) =>
+        'carousel_${previews.map((p) => p.outfit.id).join('_')}_$index',
+    };
+  }
+
+  Widget _buildEntry(
+    BuildContext context,
+    _ChatListEntry entry,
+    ChatLoaded state,
+  ) {
+    return switch (entry) {
+      _ChatOutfitCarouselEntry(:final previews) => StylistOutfitCarousel(
+          previews: previews,
+          onPreviewTap: (p) => _showOutfitSheet(context, p),
+        ),
+      _ChatMessageEntry(:final message) => _buildMessage(context, message, state),
+    };
   }
 
   Widget _buildMessage(
@@ -191,9 +250,9 @@ class _StylistPageState extends State<StylistPage> {
         return StylistGenerationLoadingCard(phase: msg.generationPhase);
       case ChatMessageType.outfitPreview:
         if (msg.outfitPreview == null) return const SizedBox.shrink();
-        return StylistOutfitPreviewCard(
-          preview: msg.outfitPreview!,
-          onTap: () => _showOutfitSheet(context, msg.outfitPreview!),
+        return StylistOutfitCarousel(
+          previews: [msg.outfitPreview!],
+          onPreviewTap: (p) => _showOutfitSheet(context, p),
         );
       case ChatMessageType.typing:
         return const StylistTypingIndicator();
@@ -228,7 +287,10 @@ class _StylistPageState extends State<StylistPage> {
                   ),
                 ),
               ),
-              StylistOutfitPreviewCard(preview: preview),
+              StylistOutfitPreviewCard(
+                preview: preview,
+                compact: false,
+              ),
               if (preview.explanation.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),
