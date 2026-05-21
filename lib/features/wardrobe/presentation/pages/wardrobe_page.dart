@@ -1,184 +1,118 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/luxury_bottom_sheet.dart';
+import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
 import '../bloc/wardrobe_state.dart';
 import '../../../../core/widgets/wardrobe_item_card.dart';
-import '../../../generator/presentation/pages/quick_generator_page.dart';
 import 'add_wardrobe_item_page.dart';
 
 class WardrobePage extends StatelessWidget {
   const WardrobePage({super.key});
 
+  static const _filterLabels = {
+    'All': 'All',
+    'top': 'Tops',
+    'bottom': 'Bottoms',
+    'shoes': 'Shoes',
+    'outerwear': 'Outerwear',
+  };
+
   Future<void> _showImageSourceDialog(BuildContext context) async {
-    return showModalBottomSheet(
+    await LuxuryBottomSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+      title: 'Add to wardrobe',
+      subtitle: 'Import pieces into your closet',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LuxurySheetAction(
+            animationIndex: 0,
+            icon: Icons.photo_library_outlined,
+            title: 'Choose from Gallery',
+            subtitle: 'Select one or multiple photos',
+            onTap: () async {
+              final navigator = Navigator.of(context);
+              navigator.pop();
+
+              final picker = ImagePicker();
+              final images = await picker.pickMultiImage(imageQuality: 85);
+
+              if (images.isNotEmpty && context.mounted) {
+                navigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => AddWardrobeItemPage(
+                      initialImages:
+                          images.map((x) => File(x.path)).toList(),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Add Wardrobe Item',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: .1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.photo_library_outlined,
-                      color: AppColors.primary,
+          LuxurySheetAction(
+            animationIndex: 1,
+            icon: Icons.camera_alt_outlined,
+            title: 'Take a Photo',
+            subtitle: 'Capture the item with your camera',
+            onTap: () async {
+              final navigator = Navigator.of(context);
+              navigator.pop();
+
+              final picker = ImagePicker();
+              final image = await picker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 85,
+              );
+
+              if (image != null && context.mounted) {
+                navigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => AddWardrobeItemPage(
+                      initialImages: [File(image.path)],
                     ),
                   ),
-                  title: const Text(
-                    'Choose from Gallery',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Select one or multiple photos',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  onTap: () async {
-                    // Capture NavigatorState before popping the modal
-                    final navigator = Navigator.of(context);
-                    navigator.pop();
-
-                    debugPrint('📸 Opening image picker...');
-                    final picker = ImagePicker();
-                    final List<XFile> images = await picker.pickMultiImage(
-                      imageQuality: 85,
-                    );
-
-                    debugPrint('📸 Selected ${images.length} images');
-                    if (images.isNotEmpty) {
-                      debugPrint(
-                        '📸 Navigating to AddWardrobeItemPage with ${images.length} images',
-                      );
-                      // Use the captured navigator instead of context
-                      navigator.push(
-                        MaterialPageRoute(
-                          builder: (context) => AddWardrobeItemPage(
-                            initialImages: images
-                                .map((x) => File(x.path))
-                                .toList(),
-                          ),
-                        ),
-                      );
-                    } else {
-                      debugPrint('⚠️ No images selected');
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt_outlined,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                  title: const Text(
-                    'Take a Photo',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Use camera to scan the item',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  onTap: () async {
-                    // Capture NavigatorState before popping the modal
-                    final navigator = Navigator.of(context);
-                    navigator.pop();
-
-                    final picker = ImagePicker();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.camera,
-                      imageQuality: 85,
-                    );
-
-                    if (image != null) {
-                      // Use the captured navigator instead of context
-                      navigator.push(
-                        MaterialPageRoute(
-                          builder: (context) => AddWardrobeItemPage(
-                            initialImages: [File(image.path)],
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+                );
+              }
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Lista de filtros para la UI
-    final filters = ["All", "top", "bottom", "shoes", "outerwear"];
+    final filters = _filterLabels.keys.toList();
 
     return BlocBuilder<WardrobeBloc, WardrobeState>(
       builder: (context, state) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text(
-              "My Wardrobe",
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
-            ),
-            centerTitle: false,
+          backgroundColor: AppColors.background,
+          appBar: AppPageAppBar(
+            title: 'My Wardrobe',
+            subtitle: 'Curate your closet',
+            automaticallyImplyLeading: false,
             actions: [
               IconButton(
-                onPressed: () {}, // Futuro: búsqueda
-                icon: const Icon(Icons.search),
+                onPressed: () {},
+                icon: const Icon(Icons.search_outlined),
+                tooltip: 'Search',
               ),
-              // Botón circular pequeño para añadir (versión header)
               Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: CircleAvatar(
-                  backgroundColor: AppColors.background,
-                  child: IconButton(
-                    icon: const Icon(Icons.add, color: AppColors.textPrimary),
-                    onPressed: () => _showImageSourceDialog(context),
+                padding: const EdgeInsets.only(right: 8),
+                child: IconButton.filledTonal(
+                  onPressed: () => _showImageSourceDialog(context),
+                  icon: const Icon(Icons.add, size: 22),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.surfaceContainerLow,
+                    foregroundColor: AppColors.onSurface,
                   ),
                 ),
               ),
@@ -186,93 +120,74 @@ class WardrobePage extends StatelessWidget {
           ),
           body: Column(
             children: [
-              // 1. Estadísticas rápidas
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(
                   children: [
                     _StatCard(
-                      label: "TOTAL ITEMS",
+                      label: 'TOTAL ITEMS',
                       value: state is WardrobeLoaded
                           ? state.allItems.length.toString()
-                          : "0",
+                          : '0',
                     ),
                     const SizedBox(width: 12),
-                    const _StatCard(label: "OUTFITS", value: "15"),
+                    const _StatCard(label: 'OUTFITS', value: '—'),
                   ],
                 ),
               ),
-
-              // 2. Filtros (Chips horizontales)
               SizedBox(
-                height: 60,
+                height: 52,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   scrollDirection: Axis.horizontal,
                   itemCount: filters.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final category = filters[index];
-                    final isSelected =
-                        state is WardrobeLoaded &&
+                    final isSelected = state is WardrobeLoaded &&
                         state.selectedCategory.toLowerCase() ==
                             category.toLowerCase();
+                    final label = _filterLabels[category] ?? category;
 
-                    // Mapeo visual de nombres (Top -> Tops)
-                    final label = category == 'All'
-                        ? 'All'
-                        : '${category[0].toUpperCase()}${category.substring(1)}s';
-
-                    return ChoiceChip(
+                    return FilterChip(
                       label: Text(label),
                       selected: isSelected,
-                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      onSelected: (_) => context.read<WardrobeBloc>().add(
+                            WardrobeFilterChanged(category),
+                          ),
+                      selectedColor: AppColors.inverseSurface,
+                      backgroundColor: AppColors.surface,
                       labelStyle: TextStyle(
                         color: isSelected
-                            ? Colors.white
-                            : AppColors.textPrimary,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                            ? AppColors.onInverseSurface
+                            : AppColors.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 13,
                       ),
-                      onSelected: (_) => context.read<WardrobeBloc>().add(
-                        WardrobeFilterChanged(category),
+                      side: BorderSide(
+                        color: isSelected
+                            ? AppColors.inverseSurface
+                            : AppColors.border,
                       ),
-                      backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                       ),
-                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                     );
                   },
                 ),
               ),
-
-              // 3. Grid de Ropa
+              const SizedBox(height: 8),
               Expanded(child: _buildGridContent(state)),
             ],
           ),
-          // Botón flotante principal - Quick Generator
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'wardrobe_quick_generator_button',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const QuickGeneratorPage(),
-                  fullscreenDialog: true,
-                ),
-              );
-            },
-            backgroundColor: AppColors.primary,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text("Quick Generate"),
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'wardrobe_ai_fab',
+            onPressed: () => context.push('/generate-outfit'),
+            tooltip: 'Generate outfit with AI',
+            child: const Icon(Icons.auto_awesome),
           ),
         );
       },
@@ -282,19 +197,21 @@ class WardrobePage extends StatelessWidget {
   Widget _buildGridContent(WardrobeState state) {
     if (state is WardrobeLoading) {
       return const Center(child: CircularProgressIndicator());
-    } else if (state is WardrobeError) {
-      return Center(child: Text("Error: ${state.message}"));
-    } else if (state is WardrobeLoaded) {
+    }
+    if (state is WardrobeError) {
+      return Center(child: Text('Error: ${state.message}'));
+    }
+    if (state is WardrobeLoaded) {
       if (state.filteredItems.isEmpty) {
-        return const Center(child: Text("No items found"));
+        return const Center(child: Text('No items found'));
       }
       return GridView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, // 2 columnas
-          childAspectRatio: 0.75, // Proporción vertical
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+          crossAxisCount: 2,
+          childAspectRatio: 0.68,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
         ),
         itemCount: state.filteredItems.length,
         itemBuilder: (context, index) {
@@ -302,11 +219,10 @@ class WardrobePage extends StatelessWidget {
         },
       );
     }
-    return const Center(child: Text("No data available"));
+    return const Center(child: Text('No data available'));
   }
 }
 
-// Widget auxiliar interno para las estadísticas
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -317,24 +233,35 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          boxShadow: AppTheme.ambientCardShadow,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
+        child: Card(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.tertiary,
+                      letterSpacing: 0.6,
+                    ),
+              ),
+            ],
+          ),
+        ),
         ),
       ),
     );

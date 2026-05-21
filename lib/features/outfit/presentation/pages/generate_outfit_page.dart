@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/outfit_generation_bloc.dart';
 import '../bloc/outfit_generation_event.dart';
 import '../bloc/outfit_generation_state.dart';
@@ -49,17 +50,14 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Generate Outfit'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+      appBar: AppSubpageAppBar(
+        title: 'Generate Outfit',
+        subtitle: 'Prompt-based styling',
         actions: [
           IconButton(
-            icon: const Icon(Icons.checkroom),
-            tooltip: 'View Saved Outfits',
-            onPressed: () {
-              context.push('/saved-outfits');
-            },
+            icon: const Icon(Icons.checkroom_outlined),
+            tooltip: 'Saved outfits',
+            onPressed: () => context.push('/saved-outfits'),
           ),
         ],
       ),

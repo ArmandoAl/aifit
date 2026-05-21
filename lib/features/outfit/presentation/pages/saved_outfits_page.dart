@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/saved_outfits_bloc.dart';
 import '../bloc/saved_outfits_event.dart';
 import '../bloc/saved_outfits_state.dart';
@@ -40,13 +43,13 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Outfits'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+      appBar: AppSubpageAppBar(
+        title: 'My Outfits',
+        subtitle: 'Saved try-on history',
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.tune_outlined),
+            tooltip: 'Filters',
             onPressed: _showFilterDialog,
           ),
         ],
@@ -183,23 +186,23 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
         // TODO: Navegar a vista de detalle
         _showOutfitDetails(outfit);
       },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          boxShadow: AppTheme.ambientCardShadow,
         ),
-        child: Column(
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Imagen
             Expanded(
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    child: CachedNetworkImage(
+                  CachedNetworkImage(
                       imageUrl: outfit.tryOnImageUrl,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -210,12 +213,10 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[200],
+                        color: AppColors.surfaceContainer,
                         child: const Icon(Icons.error_outline),
                       ),
                     ),
-                  ),
-                  // Favorito badge
                   if (outfit.isFavorite)
                     Positioned(
                       top: 8,
@@ -237,13 +238,18 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
               ),
             ),
 
-            // Info
-            Padding(
-              padding: const EdgeInsets.all(12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceContainerLow,
+                border: Border(
+                  top: BorderSide(color: AppColors.border),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Match percentage
                   Row(
                     children: [
                       Container(
@@ -252,28 +258,27 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMd),
                         ),
                         child: Text(
-                          '${outfit.matchPercentage}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.success,
-                          ),
+                          '${outfit.matchPercentage}% match',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
                       const Spacer(),
-                      // Favorito toggle
                       IconButton(
                         icon: Icon(
                           outfit.isFavorite
                               ? Icons.favorite
                               : Icons.favorite_border,
                           color: outfit.isFavorite
-                              ? AppColors.secondary
-                              : Colors.grey,
+                              ? AppColors.primary
+                              : AppColors.tertiary,
                           size: 20,
                         ),
                         onPressed: () {
@@ -333,6 +338,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -452,184 +458,88 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
   }
 
   void _showOutfitDetails(SavedOutfit outfit) {
-    showModalBottomSheet(
+    AppBottomSheet.showDraggable(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
+      title: 'Outfit details',
+      subtitle: 'Saved try-on look',
+      builder: (scrollController) => ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        children: [
+          Row(
             children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Outfit Details',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${outfit.matchPercentage}% match • ${outfit.compatibilityScore.toStringAsFixed(1)} compatibility',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        outfit.isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: outfit.isFavorite
-                            ? AppColors.secondary
-                            : Colors.grey,
-                      ),
-                      onPressed: () {
-                        context.read<SavedOutfitsBloc>().add(
-                              ToggleFavorite(
-                                outfitId: outfit.id,
-                                isFavorite: !outfit.isFavorite,
-                              ),
-                            );
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(),
-
-              // Content
               Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Imagen grande
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: outfit.tryOnImageUrl,
-                          width: double.infinity,
-                          height: 400,
-                          fit: BoxFit.cover,
-                        ),
+                child: Text(
+                  '${outfit.matchPercentage}% match',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.tertiary,
                       ),
-                      const SizedBox(height: 24),
-
-                      // Explanation
-                      if (outfit.outfit.explanation.isNotEmpty) ...[
-                        const Text(
-                          'Why this outfit works:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          outfit.outfit.explanation,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // Tags
-                      const Text(
-                        'Tags:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (outfit.occasion != null)
-                            Chip(
-                              label: Text(outfit.occasion!),
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                            ),
-                          ...outfit.colors.map(
-                            (color) => Chip(
-                              label: Text(color),
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                            ),
-                          ),
-                          ...outfit.styleTags.map(
-                            (tag) => Chip(
-                              label: Text(tag),
-                              backgroundColor: AppColors.secondary.withValues(
-                                alpha: 0.1,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Items
-                      const Text(
-                        'Items in this outfit:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...outfit.outfit.itemIds.map(
-                        (itemId) => ListTile(
-                          leading: const Icon(Icons.checkroom),
-                          title: Text(itemId),
-                          dense: true,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
+              ),
+              IconButton(
+                icon: Icon(
+                  outfit.isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: outfit.isFavorite
+                      ? AppColors.primary
+                      : AppColors.tertiary,
+                ),
+                onPressed: () {
+                  context.read<SavedOutfitsBloc>().add(
+                        ToggleFavorite(
+                          outfitId: outfit.id,
+                          isFavorite: !outfit.isFavorite,
+                        ),
+                      );
+                  Navigator.pop(context);
+                },
               ),
             ],
           ),
-        ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            child: CachedNetworkImage(
+              imageUrl: outfit.tryOnImageUrl,
+              width: double.infinity,
+              height: 400,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (outfit.outfit.explanation.isNotEmpty) ...[
+            Text(
+              'Why this works',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              outfit.outfit.explanation,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.secondary,
+                    height: 1.5,
+                  ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          Text(
+            'Tags',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (outfit.occasion != null)
+                Chip(label: Text(outfit.occasion!)),
+              ...outfit.colors.map((c) => Chip(label: Text(c))),
+              ...outfit.styleTags.map((t) => Chip(label: Text(t))),
+            ],
+          ),
+        ],
       ),
     );
   }

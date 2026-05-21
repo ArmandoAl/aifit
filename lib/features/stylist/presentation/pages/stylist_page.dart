@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
@@ -118,26 +120,10 @@ class _StylistPageState extends State<StylistPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AI Stylist',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            Text(
-              'Premium styling session',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ],
-        ),
+      appBar: AppPageAppBar(
+        title: 'AI Stylist',
+        subtitle: 'Premium styling session',
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: () => context.push('/generate-outfit'),
@@ -260,48 +246,30 @@ class _StylistPageState extends State<StylistPage> {
   }
 
   void _showOutfitSheet(BuildContext context, ChatOutfitPreview preview) {
-    showModalBottomSheet(
+    AppBottomSheet.showDraggable(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      title: 'Look details',
+      subtitle: 'Curated for your wardrobe',
+      builder: (scrollController) => ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
+        children: [
+          StylistOutfitPreviewCard(
+            preview: preview,
+            compact: false,
           ),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              const SizedBox(height: 12),
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+          if (preview.explanation.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                preview.explanation,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      height: 1.5,
+                      color: AppColors.secondary,
+                    ),
               ),
-              StylistOutfitPreviewCard(
-                preview: preview,
-                compact: false,
-              ),
-              if (preview.explanation.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    preview.explanation,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
