@@ -3,6 +3,7 @@ library;
 
 import 'package:aifit/paths.dart';
 import '../../profile/domain/user_identity_profile.dart';
+import 'outfit_semantic_targets.dart';
 
 class OutfitIntent {
   final String?
@@ -14,6 +15,7 @@ class OutfitIntent {
   final String? weather; // 'sunny', 'rainy', 'cold', 'warm'
   final Map<String, dynamic>? constraints; // Restricciones adicionales
   final String? userPrompt; // Prompt original del usuario
+  final OutfitSemanticTargets semanticTargets;
 
   OutfitIntent({
     this.reasoning,
@@ -24,22 +26,26 @@ class OutfitIntent {
     this.weather,
     this.constraints,
     this.userPrompt,
-  });
+    OutfitSemanticTargets? semanticTargets,
+  }) : semanticTargets = semanticTargets ?? const OutfitSemanticTargets();
 
   factory OutfitIntent.fromJson(Map<String, dynamic> json) {
     return OutfitIntent(
-      reasoning: json['reasoning'],
-      occasion: json['occasion'],
+      reasoning: json['reasoning']?.toString(),
+      occasion: json['occasion']?.toString(),
       preferredColors: json['preferredColors'] != null
           ? List<String>.from(json['preferredColors'])
           : [],
       styleTags: json['styleTags'] != null
           ? List<String>.from(json['styleTags'])
           : [],
-      season: json['season'],
-      weather: json['weather'],
+      season: json['season']?.toString(),
+      weather: json['weather']?.toString(),
       constraints: json['constraints'] as Map<String, dynamic>?,
-      userPrompt: json['userPrompt'],
+      userPrompt: json['userPrompt']?.toString(),
+      semanticTargets: OutfitSemanticTargets.fromJson(
+        json['semanticTargets'] as Map<String, dynamic>?,
+      ),
     );
   }
 
@@ -53,6 +59,7 @@ class OutfitIntent {
       if (weather != null) 'weather': weather,
       if (constraints != null) 'constraints': constraints,
       if (userPrompt != null) 'userPrompt': userPrompt,
+      if (!semanticTargets.isEmpty) 'semanticTargets': semanticTargets.toJson(),
     };
   }
 }

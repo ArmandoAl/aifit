@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/utils/image_compression_util.dart';
+import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../domain/outfit_models.dart';
 
 /// Genera outfits usando Gemini 2.5 Pro con análisis de imágenes
@@ -82,8 +83,9 @@ class OutfitGeneratorService {
       // Comprimir y agregar imágenes
       for (final entry in itemImages.entries) {
         debugPrint('⚙️ Compressing garment for item: ${entry.key}');
-        final compressedBytes =
-            await ImageCompressionUtil.compressGarment(entry.value);
+        final compressedBytes = await ImageCompressionUtil.compressGarment(
+          entry.value,
+        );
         parts.add(InlineDataPart('image/jpeg', compressedBytes));
       }
 
@@ -133,6 +135,24 @@ class OutfitGeneratorService {
     }
   }
 
+  static String _metadataSummary(WardrobeItem item) {
+    final m = item.aiMetadata;
+    if (m == null || m.isEmpty) return '';
+    final parts = <String>[];
+    if (m.fashionAesthetic?.primary != null) {
+      parts.add('aesthetic:${m.fashionAesthetic!.primary}');
+    }
+    if (m.styleScores?['formality'] != null) {
+      parts.add('formality:${m.styleScores!['formality']!.toStringAsFixed(2)}');
+    }
+    final topOccasion = m.occasionVectors?.entries.toList()
+      ?..sort((a, b) => b.value.compareTo(a.value));
+    if (topOccasion != null && topOccasion.isNotEmpty) {
+      parts.add('best_occasion:${topOccasion.first.key}');
+    }
+    return parts.isEmpty ? '' : ', AI: ${parts.join(', ')}';
+  }
+
   /// Construye contexto de prendas para el prompt
   String _buildWardrobeContext(FilteredWardrobe wardrobe) {
     final buffer = StringBuffer();
@@ -141,7 +161,7 @@ class OutfitGeneratorService {
       buffer.writeln('TOPS:');
       for (final item in wardrobe.tops) {
         buffer.writeln(
-          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}',
+          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}${_metadataSummary(item)}',
         );
       }
     }
@@ -150,7 +170,7 @@ class OutfitGeneratorService {
       buffer.writeln('BOTTOMS:');
       for (final item in wardrobe.bottoms) {
         buffer.writeln(
-          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}',
+          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}${_metadataSummary(item)}',
         );
       }
     }
@@ -159,7 +179,7 @@ class OutfitGeneratorService {
       buffer.writeln('SHOES:');
       for (final item in wardrobe.shoes) {
         buffer.writeln(
-          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}',
+          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}${_metadataSummary(item)}',
         );
       }
     }
@@ -168,7 +188,7 @@ class OutfitGeneratorService {
       buffer.writeln('OUTERWEAR:');
       for (final item in wardrobe.outerwear) {
         buffer.writeln(
-          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}',
+          '  - ID: ${item.id}, Type: ${item.subType}, Colors: ${item.colors}, Style: ${item.styleTags}${_metadataSummary(item)}',
         );
       }
     }

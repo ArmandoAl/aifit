@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../domain/outfit_models.dart';
+import 'wardrobe_metadata_scorer.dart';
 
 /// Algoritmo de búsqueda y filtrado de prendas
 /// 
@@ -174,15 +175,22 @@ class WardrobeSearchAlgorithm {
       }
     }
 
-    // MEJORA 2: Match difuso de Estilo con boost logarítmico
-    if (intent.styleTags.isNotEmpty) {
-      // Intersección de tags
-      final styleTagSet = intent.styleTags.toSet();
+    // Match de estilo: tags visibles + aestheticSlugs del intent
+    final intentStyles = {
+      ...intent.styleTags,
+      ...intent.semanticTargets.aestheticSlugs,
+    };
+    if (intentStyles.isNotEmpty) {
       final itemStyleTagSet = item.styleTags.toSet();
-      final matches = styleTagSet.intersection(itemStyleTagSet).length;
-      
+      final metaPrimary =
+          item.aiMetadata?.fashionAesthetic?.primary?.toLowerCase();
+      var matches = intentStyles.where(itemStyleTagSet.contains).length;
+      if (metaPrimary != null &&
+          intentStyles.any((s) => s.toLowerCase() == metaPrimary)) {
+        matches++;
+      }
+
       if (matches > 0) {
-        // Logarithmic boost: 1 match es bueno, 3 matches es excelente, pero no lineal
         score += 0.2 + (0.1 * matches.clamp(0, 3));
       } else {
         // Penalizar estilos opuestos
@@ -192,7 +200,7 @@ class WardrobeSearchAlgorithm {
           'sporty': ['formal', 'elegant'],
         };
         
-        for (final intentTag in intent.styleTags) {
+        for (final intentTag in intentStyles) {
           if (oppositeStyles[intentTag] != null) {
             for (final itemTag in item.styleTags) {
               if (oppositeStyles[intentTag]!.contains(itemTag)) {
@@ -235,10 +243,15 @@ class WardrobeSearchAlgorithm {
       score += 0.05;
     }
 
-    // Nota: El manejo de mustInclude ya se hizo al inicio (CRÍTICO 1)
-    // Este código ya no es necesario porque se maneja arriba con exclusión estricta
+    // 6. Wardrobe AI metadata v2 (occasion_vectors, style_scores, climate, aesthetic)
+    final metadataBoost = WardrobeMetadataScorer.scoreMetadata(item, intent);
+    if (metadataBoost > 0) {
+      score += metadataBoost;
+      debugPrint(
+        '   ✨ Item ${item.id} metadata boost: +${metadataBoost.toStringAsFixed(2)}',
+      );
+    }
 
-    // Normalizar a 0.0-1.0
     return score.clamp(0.0, 1.0);
   }
 
