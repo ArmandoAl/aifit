@@ -96,6 +96,11 @@ class AppStringsEs {
   static const generateOutfitCta = 'Generar outfit';
   static const creatingLooks = 'Creando looks...';
   static const curatedLook = 'Look seleccionado';
+  static String matchPercent(int percent) => '$percent% coincidencia';
+  static String piecesFromWardrobe(int count) =>
+      count == 1 ? '1 prenda de tu armario' : '$count prendas de tu armario';
+  static String piecesShort(int count) =>
+      count == 1 ? '1 prenda' : '$count prendas';
 
   // —— Generar outfit ——
   static const generateOutfitTitle = 'Generar outfit';

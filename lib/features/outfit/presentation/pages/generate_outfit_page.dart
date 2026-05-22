@@ -309,7 +309,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${outfit.matchPercentage}% match',
+                        AppStringsEs.matchPercent(outfit.matchPercentage),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppColors.success,
@@ -332,7 +332,10 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             const SizedBox(height: 16),
 
             // Explanation
-            Text(outfit.explanation, style: const TextStyle(fontSize: 14)),
+            Text(
+              outfit.displayExplanation,
+              style: const TextStyle(fontSize: 14),
+            ),
             const SizedBox(height: 16),
 
             // Items

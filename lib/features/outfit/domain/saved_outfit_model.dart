@@ -70,6 +70,7 @@ class SavedOutfit {
       id: storageId,
       matchPercentage: 0,
       explanation: 'Saved try-on look',
+      explanationEs: 'Look guardado con try-on',
       compatibilityScore: 0,
     );
     return SavedOutfit(

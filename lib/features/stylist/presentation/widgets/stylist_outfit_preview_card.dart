@@ -101,11 +101,11 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (preview.explanation.isNotEmpty) ...[
+                    if (preview.outfit.displayExplanation.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Expanded(
                         child: Text(
-                          preview.explanation,
+                          preview.outfit.displayExplanation,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style:
@@ -120,7 +120,7 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '${preview.outfit.itemIds.length} pieces',
+                          AppStringsEs.piecesShort(preview.outfit.itemIds.length),
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: AppColors.textSecondary,
@@ -211,7 +211,7 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '$score% match',
+                            AppStringsEs.matchPercent(score),
                             style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w600,
@@ -221,10 +221,10 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (preview.explanation.isNotEmpty) ...[
+                    if (preview.outfit.displayExplanation.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        preview.explanation,
+                        preview.outfit.displayExplanation,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                               height: 1.4,
@@ -233,7 +233,9 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                     ],
                     const SizedBox(height: 8),
                     Text(
-                      '${preview.outfit.itemIds.length} pieces from your wardrobe',
+                      AppStringsEs.piecesFromWardrobe(
+                        preview.outfit.itemIds.length,
+                      ),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.textSecondary,
                           ),

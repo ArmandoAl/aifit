@@ -96,7 +96,10 @@ class GeneratedOutfit {
   final String? shoesId;
   final String? outerwearId; // Optional
   final int matchPercentage; // 0-100
+  /// Inglés — archivo, debug, reutilización con IA.
   final String explanation;
+  /// Español — texto que ve el usuario.
+  final String explanationEs;
   final double compatibilityScore; // 0.0-1.0
   final Map<String, dynamic>? metadata; // Additional data
 
@@ -108,9 +111,17 @@ class GeneratedOutfit {
     this.outerwearId,
     required this.matchPercentage,
     required this.explanation,
+    this.explanationEs = '',
     required this.compatibilityScore,
     this.metadata,
   });
+
+  /// Texto para UI: prioriza español; si falta, inglés (outfits viejos).
+  String get displayExplanation {
+    final es = explanationEs.trim();
+    if (es.isNotEmpty) return es;
+    return explanation.trim();
+  }
 
   factory GeneratedOutfit.fromJson(Map<String, dynamic> json) {
     return GeneratedOutfit(
@@ -121,6 +132,10 @@ class GeneratedOutfit {
       outerwearId: json['outerwearId'],
       matchPercentage: json['matchPercentage'] ?? 0,
       explanation: json['explanation'] ?? json['text'] ?? '',
+      explanationEs:
+          json['explanationEs']?.toString() ??
+          json['explanation_es']?.toString() ??
+          '',
       compatibilityScore: (json['compatibilityScore'] ?? 0.0).toDouble(),
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
@@ -135,6 +150,7 @@ class GeneratedOutfit {
       if (outerwearId != null) 'outerwearId': outerwearId,
       'matchPercentage': matchPercentage,
       'explanation': explanation,
+      if (explanationEs.isNotEmpty) 'explanationEs': explanationEs,
       'compatibilityScore': compatibilityScore,
       if (metadata != null) 'metadata': metadata,
     };

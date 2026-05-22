@@ -156,7 +156,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           ChatMessage.outfit(
             ChatOutfitPreview(
               outfit: outfit,
-              explanation: outfit.explanation,
+              explanation: outfit.displayExplanation,
               tryOnStatus: status,
             ),
           ),

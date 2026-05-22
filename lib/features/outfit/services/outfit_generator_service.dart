@@ -225,7 +225,8 @@ Return a JSON array with exactly 3 outfits in this format:
     "shoesId": "item_id",
     "outerwearId": "item_id" // Optional
     "matchPercentage": 95,
-    "explanation": "Why this outfit works well...",
+    "explanation": "English: why this outfit works (for logs/archival)",
+    "explanationEs": "Español: por qué funciona este look (2-4 frases, tono premium)",
     "compatibilityScore": 0.92
   },
   {
@@ -243,7 +244,9 @@ IMPORTANT:
 - Each outfit must be unique (different combinations)
 - matchPercentage: 0-100 (how well it matches user request)
 - compatibilityScore: 0.0-1.0 (how well items work together)
-- Return ONLY valid JSON array, no markdown, no explanations
+- explanation: ALWAYS English (concise stylist rationale)
+- explanationEs: ALWAYS Spanish (Mexico/LATAM neutral, same meaning as explanation, for end users)
+- Return ONLY valid JSON array, no markdown, no text outside JSON
 """;
   }
 

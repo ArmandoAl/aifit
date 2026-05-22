@@ -265,7 +265,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                               BorderRadius.circular(AppTheme.radiusMd),
                         ),
                         child: Text(
-                          '${outfit.matchPercentage}% match',
+                          AppStringsEs.matchPercent(outfit.matchPercentage),
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700,
@@ -478,7 +478,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
             children: [
               Expanded(
                 child: Text(
-                  '${outfit.matchPercentage}% match',
+                  AppStringsEs.matchPercent(outfit.matchPercentage),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.tertiary,
                       ),
@@ -513,7 +513,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
             ),
           ),
           const SizedBox(height: 24),
-          if (outfit.outfit.explanation.isNotEmpty) ...[
+          if (outfit.outfit.displayExplanation.isNotEmpty) ...[
             Text(
               AppStringsEs.whyThisWorks,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -522,7 +522,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              outfit.outfit.explanation,
+              outfit.outfit.displayExplanation,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.secondary,
                     height: 1.5,
