@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
-import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show debugPrint, defaultTargetPlatform, kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/services/firestore_service.dart';
 import '../domain/user_model.dart' as app_model;
@@ -49,68 +50,89 @@ class AuthRepository {
 
   Future<app_model.User?> signInWithGoogle() async {
     try {
-      debugPrint("🔐 Google Sign-In - Starting...");
-      debugPrint("   Platform: ${defaultTargetPlatform.name}");
+      debugPrint('🔐 Google Sign-In - Starting...');
+      debugPrint('   kIsWeb: $kIsWeb');
+      debugPrint('   Platform: ${defaultTargetPlatform.name}');
 
-      await _ensureGoogleInitialized();
-      debugPrint("✅ Google Sign-In initialized");
+      final fb_auth.User firebaseUser = kIsWeb
+          ? await _signInWithGoogleWeb()
+          : await _signInWithGoogleNative();
 
-      debugPrint("   Attempting authentication...");
-      final googleUser = await _googleSignIn.authenticate();
-      
-      debugPrint("✅ Google user authenticated: ${googleUser.email}");
-      final googleAuth = googleUser.authentication;
-      
-      if (googleAuth.idToken == null) {
-        debugPrint("❌ Google authentication missing idToken");
-        throw Exception("Google Sign-In failed: missing idToken");
-      }
-      
-      debugPrint("✅ Google idToken obtained");
-      final credential = fb_auth.GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final firebaseUser = userCredential.user;
-      if (firebaseUser == null) {
-        throw Exception("FirebaseAuth returned null user");
-      }
-
-      // Sync to Firestore (with retry for transient errors)
       try {
         await _syncFirebaseUserToFirestore(firebaseUser);
       } catch (e) {
-        // Firestore sync failure is not critical - user is still authenticated
-        // This can happen with transient network issues
-        debugPrint("⚠️ Firestore sync failed (non-critical): $e");
-        // Continue - user can still use the app
+        debugPrint('⚠️ Firestore sync failed (non-critical): $e');
       }
 
-      debugPrint("═══════════════════════════════════════════════════");
-      debugPrint("✅ USUARIO AUTENTICADO CON GOOGLE");
-      debugPrint("   UID: ${firebaseUser.uid}");
-      debugPrint("   Email: ${firebaseUser.email ?? 'N/A'}");
-      debugPrint("   Nombre: ${firebaseUser.displayName ?? 'N/A'}");
-      debugPrint("   Foto: ${firebaseUser.photoURL ?? 'N/A'}");
-      debugPrint("═══════════════════════════════════════════════════");
-      debugPrint("📝 IMPORTANTE: Todos los datos se asociarán con este UID");
-      debugPrint("   - Firestore: users/${firebaseUser.uid}");
-      debugPrint("   - Storage: users/${firebaseUser.uid}/...");
-      debugPrint("═══════════════════════════════════════════════════");
-
+      _logAuthenticatedUser(firebaseUser);
       return _toAppUser(firebaseUser);
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        debugPrint("⚠️ Google Sign-In cancelled by user");
+    } on fb_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request') {
+        debugPrint('⚠️ Google Sign-In cancelled by user');
         return null;
       }
-      debugPrint("❌ Google Sign-In Error: $e");
-      throw Exception("Google Sign-In Error: $e");
+      debugPrint('❌ Firebase Auth Error: ${e.code} - ${e.message}');
+      throw Exception('Google Sign-In Error: ${e.message}');
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        debugPrint('⚠️ Google Sign-In cancelled by user');
+        return null;
+      }
+      debugPrint('❌ Google Sign-In Error: $e');
+      throw Exception('Google Sign-In Error: $e');
     } catch (e) {
-      debugPrint("❌ Google Sign-In Error: $e");
-      throw Exception("Google Sign-In Error: $e");
+      debugPrint('❌ Google Sign-In Error: $e');
+      throw Exception('Google Sign-In Error: $e');
     }
+  }
+
+  /// Web: GIS no soporta [GoogleSignIn.authenticate]; usar popup de Firebase Auth.
+  Future<fb_auth.User> _signInWithGoogleWeb() async {
+    debugPrint('🌐 Using Firebase signInWithPopup (web)');
+    final provider = fb_auth.GoogleAuthProvider();
+    provider.setCustomParameters({'prompt': 'select_account'});
+
+    final userCredential = await _auth.signInWithPopup(provider);
+    final user = userCredential.user;
+    if (user == null) {
+      throw Exception('FirebaseAuth returned null user');
+    }
+    return user;
+  }
+
+  /// iOS / Android / desktop: flujo nativo con google_sign_in 7.x.
+  Future<fb_auth.User> _signInWithGoogleNative() async {
+    await _ensureGoogleInitialized();
+    debugPrint('✅ Google Sign-In initialized (native)');
+
+    final googleUser = await _googleSignIn.authenticate();
+    debugPrint('✅ Google user authenticated: ${googleUser.email}');
+
+    final googleAuth = googleUser.authentication;
+    if (googleAuth.idToken == null) {
+      throw Exception('Google Sign-In failed: missing idToken');
+    }
+
+    final credential = fb_auth.GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+
+    final userCredential = await _auth.signInWithCredential(credential);
+    final user = userCredential.user;
+    if (user == null) {
+      throw Exception('FirebaseAuth returned null user');
+    }
+    return user;
+  }
+
+  void _logAuthenticatedUser(fb_auth.User firebaseUser) {
+    debugPrint('═══════════════════════════════════════════════════');
+    debugPrint('✅ USUARIO AUTENTICADO CON GOOGLE');
+    debugPrint('   UID: ${firebaseUser.uid}');
+    debugPrint('   Email: ${firebaseUser.email ?? 'N/A'}');
+    debugPrint('   Nombre: ${firebaseUser.displayName ?? 'N/A'}');
+    debugPrint('═══════════════════════════════════════════════════');
   }
 
   Future<void> _syncFirebaseUserToFirestore(fb_auth.User user) async {
@@ -145,8 +167,10 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
-    debugPrint("🔓 Sign out");
+    debugPrint('🔓 Sign out');
     await _auth.signOut();
+    if (kIsWeb) return;
+
     try {
       await _ensureGoogleInitialized();
       await _googleSignIn.disconnect();
