@@ -28,3 +28,13 @@ class ChatGenerateOutfitRequested extends ChatEvent {
   @override
   List<Object?> get props => [generateTryOn];
 }
+
+/// Genera try-on bajo demanda para un look del chat (P1).
+class ChatTryOnForOutfitRequested extends ChatEvent {
+  final String outfitId;
+
+  const ChatTryOnForOutfitRequested(this.outfitId);
+
+  @override
+  List<Object?> get props => [outfitId];
+}

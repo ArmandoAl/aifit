@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import '../../../../core/platform/image_preview.dart';
+import '../../../../core/platform/app_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/keyboard_utils.dart';
 import '../../../../core/widgets/shell_bottom_insets.dart';
@@ -25,8 +26,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
   final ProfileRepository _profileRepository = ProfileRepository();
   final UserBaseImageService _baseImageService = UserBaseImageService();
-  final List<File> _bodyPhotos = [];
-  final List<File> _facePhotos = [];
+  final List<AppImage> _bodyPhotos = [];
+  final List<AppImage> _facePhotos = [];
   // URLs from Firestore (already uploaded)
   final List<String> _bodyPhotoUrls = [];
   final List<String> _facePhotoUrls = [];
@@ -61,8 +62,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
 
     if (image != null) {
+      final picked = await AppImage.fromXFile(image);
+      if (!mounted) return;
       setState(() {
-        targetList.add(File(image.path));
+        targetList.add(picked);
       });
     }
   }
@@ -1005,8 +1008,8 @@ class _ProfilePageState extends State<ProfilePage> {
     required String subtitle,
     required List<String> bodyPhotoUrls,
     required List<String> facePhotoUrls,
-    required List<File> localBodyPhotos,
-    required List<File> localFacePhotos,
+    required List<AppImage> localBodyPhotos,
+    required List<AppImage> localFacePhotos,
     required int maxPhotos,
     required bool isBodyPhoto,
   }) {
@@ -1111,13 +1114,11 @@ class _ProfilePageState extends State<ProfilePage> {
               final localIndex = index - photoUrls.length;
               return Stack(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      image: DecorationImage(
-                        image: FileImage(localPhotos[localIndex]),
-                        fit: BoxFit.cover,
-                      ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: imageSourcePreview(
+                      localPhotos[localIndex],
+                      fit: BoxFit.cover,
                     ),
                   ),
                   Positioned(

@@ -10,11 +10,13 @@ class StylistOutfitCarousel extends StatelessWidget {
 
   final List<ChatOutfitPreview> previews;
   final void Function(ChatOutfitPreview preview) onPreviewTap;
+  final void Function(ChatOutfitPreview preview)? onTryOnRequest;
 
   const StylistOutfitCarousel({
     super.key,
     required this.previews,
     required this.onPreviewTap,
+    this.onTryOnRequest,
   });
 
   @override
@@ -62,6 +64,9 @@ class StylistOutfitCarousel extends StatelessWidget {
                   preview: preview,
                   compact: true,
                   onTap: () => onPreviewTap(preview),
+                  onTryOnRequest: onTryOnRequest != null
+                      ? () => onTryOnRequest!(preview)
+                      : null,
                 ),
               );
             },

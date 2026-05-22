@@ -273,6 +273,20 @@ class SavedOutfitsRepository {
     }
   }
 
+  /// Actualiza solo la URL de try-on (flujo progresivo P1).
+  Future<void> updateTryOnImageUrl(String outfitId, String tryOnImageUrl) async {
+    try {
+      await _firestore.collection('saved_outfits').doc(outfitId).update({
+        'tryOnImageUrl': tryOnImageUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('✅ Try-on URL updated for outfit $outfitId');
+    } catch (e) {
+      debugPrint('❌ Error updating try-on URL: $e');
+      throw Exception('Failed to update try-on image: $e');
+    }
+  }
+
   /// Actualiza un outfit (favoritos, tags, notas, etc.)
   Future<void> updateOutfit(SavedOutfit outfit) async {
     try {

@@ -1,9 +1,9 @@
-import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
+import '../../../../core/platform/app_image.dart';
+import '../../../../core/platform/network_image_loader.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/firebase_ai_service_impl.dart';
 import '../../domain/wardrobe_ai_metadata.dart';
@@ -220,25 +220,16 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
     });
 
     try {
-      // 1. Download image from URL
       debugPrint('📥 Downloading image from: ${_currentItem.imageUrl}');
-      final tempDir = await getTemporaryDirectory();
-      final imageFile = File(
-        '${tempDir.path}/analyze_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-
-      final response = await _dio.get(
+      final bytes = await NetworkImageLoader.downloadBytes(
+        _dio,
         _currentItem.imageUrl,
-        options: Options(responseType: ResponseType.bytes),
       );
+      final image = AppImage(bytes: bytes, name: 'wardrobe_item.jpg');
 
-      await imageFile.writeAsBytes(response.data);
-      debugPrint('✅ Image downloaded to: ${imageFile.path}');
-
-      // 2. Analyze with AI
       debugPrint('🔍 Analyzing image with AI...');
       final aiData = await _aiService.analyzeImageToJson(
-        image: imageFile,
+        image: image,
         promptInstruction: WardrobeAnalysisPrompt.fullAnalysis,
       );
 
@@ -297,12 +288,6 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
         );
       }
 
-      // Clean up temp file
-      try {
-        await imageFile.delete();
-      } catch (_) {
-        // Ignore cleanup errors
-      }
     } catch (e) {
       debugPrint('❌ Error analyzing image: $e');
       if (mounted) {

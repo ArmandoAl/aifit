@@ -1,9 +1,11 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
+
+import '../../../core/platform/network_image_loader.dart';
 import '../../../core/utils/image_compression_util.dart';
 import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../domain/outfit_models.dart';
@@ -83,8 +85,9 @@ class OutfitGeneratorService {
       // Comprimir y agregar imágenes
       for (final entry in itemImages.entries) {
         debugPrint('⚙️ Compressing garment for item: ${entry.key}');
-        final compressedBytes = await ImageCompressionUtil.compressGarment(
+        final compressedBytes = await ImageCompressionUtil.compressBytes(
           entry.value,
+          payload: AiImagePayload.garment,
         );
         parts.add(InlineDataPart('image/jpeg', compressedBytes));
       }
@@ -111,15 +114,6 @@ class OutfitGeneratorService {
 
       // 6. Convertir a lista de GeneratedOutfit
       final outfits = _parseOutfitsFromJson(jsonData);
-
-      // 7. Limpiar archivos temporales
-      for (final file in itemImages.values) {
-        try {
-          await file.delete();
-        } catch (_) {
-          // Ignore cleanup errors
-        }
-      }
 
       debugPrint('✅ Generated ${outfits.length} outfits');
       return outfits;
@@ -254,14 +248,12 @@ IMPORTANT:
   }
 
   /// Descarga imágenes de prendas para análisis
-  Future<Map<String, File>> _downloadItemImages(
+  Future<Map<String, Uint8List>> _downloadItemImages(
     FilteredWardrobe wardrobe, {
     int maxItems = 20,
   }) async {
-    final tempDir = await getTemporaryDirectory();
-    final downloadedImages = <String, File>{};
+    final downloadedImages = <String, Uint8List>{};
 
-    // Combinar todos los items
     final allItems = [
       ...wardrobe.tops,
       ...wardrobe.bottoms,
@@ -271,20 +263,12 @@ IMPORTANT:
 
     for (final item in allItems) {
       try {
-        final imageFile = File(
-          '${tempDir.path}/outfit_gen_${item.id}_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
-
-        final response = await _dio.get(
+        downloadedImages[item.id] = await NetworkImageLoader.downloadBytes(
+          _dio,
           item.imageUrl,
-          options: Options(responseType: ResponseType.bytes),
         );
-
-        await imageFile.writeAsBytes(response.data);
-        downloadedImages[item.id] = imageFile;
       } catch (e) {
         debugPrint('⚠️ Failed to download image for item ${item.id}: $e');
-        // Continue with other items
       }
     }
 

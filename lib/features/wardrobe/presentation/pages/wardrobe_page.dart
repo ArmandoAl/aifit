@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import '../../../../core/platform/app_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/luxury_bottom_sheet.dart';
@@ -46,11 +46,12 @@ class WardrobePage extends StatelessWidget {
               final images = await picker.pickMultiImage(imageQuality: 85);
 
               if (images.isNotEmpty && context.mounted) {
+                final initial = await AppImage.fromXFiles(images);
+                if (!context.mounted) return;
                 navigator.push(
                   MaterialPageRoute(
                     builder: (context) => AddWardrobeItemPage(
-                      initialImages:
-                          images.map((x) => File(x.path)).toList(),
+                      initialImages: initial,
                     ),
                   ),
                 );
@@ -73,10 +74,12 @@ class WardrobePage extends StatelessWidget {
               );
 
               if (image != null && context.mounted) {
+                final initial = await AppImage.fromXFile(image);
+                if (!context.mounted) return;
                 navigator.push(
                   MaterialPageRoute(
                     builder: (context) => AddWardrobeItemPage(
-                      initialImages: [File(image.path)],
+                      initialImages: [initial],
                     ),
                   ),
                 );

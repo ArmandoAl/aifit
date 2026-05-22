@@ -1,14 +1,19 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
+import '../../domain/outfit_models.dart';
+import '../../domain/try_on_status.dart';
 import '../../services/outfit_service.dart';
 import 'outfit_generation_event.dart';
 import 'outfit_generation_state.dart';
 
-/// BLoC para manejar la generación de outfits
-class OutfitGenerationBloc extends Bloc<OutfitGenerationEvent, OutfitGenerationState> {
-  final OutfitService _outfitService = OutfitService();
+/// BLoC con flujo progresivo P1: outfits primero, try-on bajo demanda.
+class OutfitGenerationBloc
+    extends Bloc<OutfitGenerationEvent, OutfitGenerationState> {
+  final OutfitService _outfitService;
 
-  OutfitGenerationBloc() : super(OutfitGenerationInitial()) {
+  OutfitGenerationBloc({OutfitService? outfitService})
+      : _outfitService = outfitService ?? OutfitService(),
+        super(OutfitGenerationInitial()) {
     on<GenerateOutfitsRequested>(_onGenerateOutfitsRequested);
     on<GenerateTryOnImageRequested>(_onGenerateTryOnImageRequested);
     on<OutfitGenerationReset>(_onReset);
@@ -19,40 +24,47 @@ class OutfitGenerationBloc extends Bloc<OutfitGenerationEvent, OutfitGenerationS
     Emitter<OutfitGenerationState> emit,
   ) async {
     try {
-      debugPrint('🚀 Starting outfit generation: "${event.userPrompt}"');
-
-      // Fase 1: Analizando intención
       emit(OutfitGenerationLoading(currentPhase: 'analyzing'));
-      await Future.delayed(const Duration(milliseconds: 100)); // Pequeño delay para UI
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Fase 2: Filtrando prendas
       emit(OutfitGenerationLoading(currentPhase: 'filtering'));
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Fase 3: Generando outfits
       emit(OutfitGenerationLoading(currentPhase: 'generating'));
 
-      // Si se solicita generar imágenes, mostrar fase de creación
-      if (event.generateImage) {
-        emit(OutfitGenerationLoading(currentPhase: 'creating_image'));
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // Llamar al servicio
-      final result = await _outfitService.generateCompleteOutfit(
+      final result = await _outfitService.generateOutfitSuggestions(
         userPrompt: event.userPrompt,
-        generateImage: event.generateImage,
       );
 
-      // Éxito
-      emit(OutfitGenerationLoaded(
+      final statuses = <String, TryOnStatus>{};
+      for (var i = 0; i < result.outfits.length; i++) {
+        final id = result.outfits[i].id;
+        if (!event.generateImage) {
+          statuses[id] = TryOnStatus.none;
+        } else if (i == 0) {
+          statuses[id] = TryOnStatus.generating;
+        } else {
+          statuses[id] = TryOnStatus.readyForTryOn;
+        }
+      }
+
+      var loaded = OutfitGenerationLoaded(
         outfits: result.outfits,
         intent: result.intent,
-        tryOnImageUrl: result.tryOnImageUrl, // Backward compatibility
-        tryOnImageUrls: result.tryOnImageUrls,
-      ));
+        tryOnStatuses: statuses,
+      );
 
-      debugPrint('✅ Outfits generated successfully: ${result.outfits.length} outfits');
+      emit(loaded);
+
+      if (!event.generateImage || result.outfits.isEmpty) {
+        return;
+      }
+
+      await _runTryOnForOutfit(
+        outfitId: result.outfits.first.id,
+        emit: emit,
+        loaded: loaded,
+      );
     } catch (e) {
       debugPrint('❌ Error generating outfits: $e');
       emit(OutfitGenerationError(message: e.toString()));
@@ -63,11 +75,87 @@ class OutfitGenerationBloc extends Bloc<OutfitGenerationEvent, OutfitGenerationS
     GenerateTryOnImageRequested event,
     Emitter<OutfitGenerationState> emit,
   ) async {
-    // TODO: Implementar generación de imagen para outfit específico
-    // Por ahora, esto se maneja en el flujo completo
-    emit(OutfitGenerationError(
-      message: 'Try-on image generation for specific outfit not yet implemented',
-    ));
+    final current = state;
+    if (current is! OutfitGenerationLoaded) return;
+
+    final status = current.statusFor(event.outfitId);
+    if (status == TryOnStatus.generating || status == TryOnStatus.ready) {
+      return;
+    }
+
+    await _runTryOnForOutfit(
+      outfitId: event.outfitId,
+      emit: emit,
+      loaded: current,
+    );
+  }
+
+  Future<void> _runTryOnForOutfit({
+    required String outfitId,
+    required Emitter<OutfitGenerationState> emit,
+    required OutfitGenerationLoaded loaded,
+  }) async {
+    GeneratedOutfit? outfit;
+    for (final o in loaded.outfits) {
+      if (o.id == outfitId) {
+        outfit = o;
+        break;
+      }
+    }
+    if (outfit == null) return;
+
+    final statuses = Map<String, TryOnStatus>.from(loaded.tryOnStatuses);
+    final errors = Map<String, String>.from(loaded.tryOnErrors);
+    statuses[outfitId] = TryOnStatus.generating;
+    errors.remove(outfitId);
+
+    loaded = loaded.copyWith(
+      tryOnStatuses: statuses,
+      tryOnErrors: errors,
+    );
+    emit(loaded);
+
+    try {
+      final url = await _outfitService.generateTryOnForOutfit(
+        outfit: outfit,
+        intent: loaded.intent,
+      );
+
+      final latest = state;
+      if (latest is! OutfitGenerationLoaded) return;
+
+      statuses.addAll(latest.tryOnStatuses);
+      errors.addAll(latest.tryOnErrors);
+      final urls = Map<String, String>.from(latest.tryOnImageUrls);
+
+      if (url != null && url.isNotEmpty) {
+        urls[outfitId] = url;
+        statuses[outfitId] = TryOnStatus.ready;
+        errors.remove(outfitId);
+
+        emit(
+          latest.copyWith(
+            tryOnImageUrls: urls,
+            tryOnStatuses: statuses,
+            tryOnImageUrl: latest.tryOnImageUrl ?? url,
+          ),
+        );
+      } else {
+        statuses[outfitId] = TryOnStatus.failed;
+        errors[outfitId] = 'No se pudo generar la imagen';
+        emit(latest.copyWith(tryOnStatuses: statuses, tryOnErrors: errors));
+      }
+    } catch (e) {
+      final latest = state;
+      if (latest is! OutfitGenerationLoaded) return;
+
+      statuses.addAll(latest.tryOnStatuses);
+      errors.addAll(latest.tryOnErrors);
+      statuses[outfitId] = TryOnStatus.failed;
+      errors[outfitId] = e.toString();
+
+      emit(latest.copyWith(tryOnStatuses: statuses, tryOnErrors: errors));
+    }
   }
 
   void _onReset(

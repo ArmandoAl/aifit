@@ -1,7 +1,8 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/platform/app_image.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/onboarding_gate_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../services/user_identity_analysis_service.dart';
 
@@ -29,7 +30,7 @@ class ProfileRepository {
   /// Upload body photos and update Firestore
   Future<void> uploadBodyPhotos({
     required String userId,
-    required List<File> photos,
+    required List<AppImage> photos,
   }) async {
     try {
       debugPrint('📸 Uploading ${photos.length} body photos...');
@@ -39,14 +40,16 @@ class ProfileRepository {
       try {
         urls = await _storageService.uploadMultiplePhotos(
           userId: userId,
-          files: photos,
+          images: photos,
           photoType: 'body',
         );
         debugPrint('✅ Photos uploaded to Storage');
       } catch (e) {
         debugPrint('⚠️ Storage upload failed (using mock URLs): $e');
         // Use mock URLs for offline development
-        urls = photos.map((f) => 'mock://body_photo_${f.path.split('/').last}').toList();
+        urls = photos
+            .map((f) => 'mock://body_photo_${f.storageKey}')
+            .toList();
       }
 
       // Try to update Firestore
@@ -72,6 +75,7 @@ class ProfileRepository {
 
       debugPrint('✅ Body photos process completed');
 
+      OnboardingGateService.invalidateCache();
       _refreshIdentityProfiles(userId);
     } catch (e) {
       debugPrint('❌ Error uploading body photos: $e');
@@ -82,7 +86,7 @@ class ProfileRepository {
   /// Upload face photos and update Firestore
   Future<void> uploadFacePhotos({
     required String userId,
-    required List<File> photos,
+    required List<AppImage> photos,
   }) async {
     try {
       debugPrint('📸 Uploading ${photos.length} face photos...');
@@ -92,14 +96,16 @@ class ProfileRepository {
       try {
         urls = await _storageService.uploadMultiplePhotos(
           userId: userId,
-          files: photos,
+          images: photos,
           photoType: 'face',
         );
         debugPrint('✅ Photos uploaded to Storage');
       } catch (e) {
         debugPrint('⚠️ Storage upload failed (using mock URLs): $e');
         // Use mock URLs for offline development
-        urls = photos.map((f) => 'mock://face_photo_${f.path.split('/').last}').toList();
+        urls = photos
+            .map((f) => 'mock://face_photo_${f.storageKey}')
+            .toList();
       }
 
       // Try to update Firestore
@@ -125,6 +131,7 @@ class ProfileRepository {
 
       debugPrint('✅ Face photos process completed');
 
+      OnboardingGateService.invalidateCache();
       _refreshIdentityProfiles(userId);
     } catch (e) {
       debugPrint('❌ Error uploading face photos: $e');
@@ -181,6 +188,30 @@ class ProfileRepository {
       debugPrint('Error removing photo: $e');
       throw Exception('Failed to remove photo: $e');
     }
+  }
+
+  /// True si el usuario tiene al menos una foto válida (cara o cuerpo).
+  Future<bool> hasUserIdentityPhotos(String userId) async {
+    try {
+      final profile = await getUserProfile(userId);
+      if (profile == null) return false;
+
+      final body = _validPhotoUrls(profile['bodyPhotos']);
+      final face = _validPhotoUrls(profile['facePhotos']);
+
+      return body.isNotEmpty || face.isNotEmpty;
+    } catch (e) {
+      debugPrint('⚠️ hasUserIdentityPhotos check failed: $e');
+      return false;
+    }
+  }
+
+  List<String> _validPhotoUrls(dynamic field) {
+    if (field is! List) return [];
+    return field
+        .map((e) => e.toString())
+        .where((u) => u.isNotEmpty && !u.startsWith('mock://'))
+        .toList();
   }
 
   /// Mark onboarding as completed

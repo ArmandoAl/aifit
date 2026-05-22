@@ -13,8 +13,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/main_layout.dart';
 import '../widgets/shell_tab_transition.dart';
+import '../../core/services/onboarding_gate_service.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/stylist/domain/chat_models.dart';
 
 // Definimos una clave global para el navegador
@@ -45,39 +47,36 @@ GoRouter createRouter(BuildContext context) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final authState = authBloc.state;
       final currentLocation = state.matchedLocation;
 
-      // Si está cargando, solo permitir splash
       if (authState is AuthLoading) {
         if (currentLocation != '/splash') return '/splash';
         return null;
       }
 
-      // Si no está autenticado
       if (authState is AuthUnauthenticated) {
-        // Allow onboarding routes
-        if (currentLocation == '/login' || 
-            currentLocation == '/welcome' || 
+        if (currentLocation == '/login' ||
+            currentLocation == '/welcome' ||
             currentLocation == '/setup-photos') {
-          return null; // Stay on current route
+          return null;
         }
-        // From splash or any other route, go to login
         return '/login';
       }
 
-      // Si está autenticado
       if (authState is AuthAuthenticated) {
-        // From splash or login, go to welcome (onboarding)
+        final userId = authState.user.id;
+
         if (currentLocation == '/splash' || currentLocation == '/login') {
-          return '/welcome';
+          return OnboardingGateService.initialRouteFor(userId);
         }
-        // Allow welcome and setup-photos for onboarding flow
-        if (currentLocation == '/welcome' || currentLocation == '/setup-photos') {
-          return null;
-        }
-        return null;
+
+        final blocked = await OnboardingGateService.redirectIfOnboardingComplete(
+          userId,
+          currentLocation,
+        );
+        if (blocked != null) return blocked;
       }
 
       return null;
@@ -86,8 +85,7 @@ GoRouter createRouter(BuildContext context) {
       // Splash Screen
       GoRoute(
         path: '/splash',
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        builder: (context, state) => const SplashPage(),
       ),
 
       // Login Page

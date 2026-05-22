@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/services/onboarding_gate_service.dart';
+import '../../../../core/services/onboarding_prefs.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_state.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -58,6 +63,32 @@ class _WelcomePageState extends State<WelcomePage> {
     super.dispose();
   }
 
+  Future<void> _finishTips({required bool goToPhotoSetup}) async {
+    await OnboardingPrefs.markTipsSeen();
+    OnboardingGateService.invalidateCache();
+
+    if (!mounted) return;
+
+    if (!goToPhotoSetup) {
+      context.go('/wardrobe');
+      return;
+    }
+
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      final hasPhotos = await OnboardingGateService.userHasIdentityPhotos(
+        authState.user.id,
+      );
+      if (!mounted) return;
+      if (hasPhotos) {
+        context.go('/wardrobe');
+        return;
+      }
+    }
+
+    context.go('/setup-photos');
+  }
+
   void _nextPage() {
     if (_currentPage < _steps.length - 1) {
       _pageController.nextPage(
@@ -65,12 +96,12 @@ class _WelcomePageState extends State<WelcomePage> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.go('/setup-photos');
+      _finishTips(goToPhotoSetup: true);
     }
   }
 
   void _skip() {
-    context.go('/setup-photos');
+    _finishTips(goToPhotoSetup: true);
   }
 
   @override

@@ -13,15 +13,11 @@ import 'outfit_intent_analyzer.dart';
 import 'wardrobe_search_algorithm.dart';
 import 'outfit_generator_service.dart';
 import 'virtual_try_on_service.dart';
-import 'user_base_image_service.dart';
 
 /// Servicio principal que orquesta todo el flujo de generación de outfits
 ///
-/// Coordina las 4 fases:
-/// 1. Análisis de intención
-/// 2. Búsqueda y filtrado
-/// 3. Generación de outfits
-/// 4. Virtual Try-On
+/// Fases 1–3: intención → filtro → outfits (rápido, muestra UI).
+/// Fase 4: try-on bajo demanda o solo el primer look (P1 progresivo).
 class OutfitService {
   final FirebaseFirestore _firestore = FirestoreService.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -30,177 +26,150 @@ class OutfitService {
   final OutfitIntentAnalyzer _intentAnalyzer = OutfitIntentAnalyzer();
   final OutfitGeneratorService _outfitGenerator = OutfitGeneratorService();
   final VirtualTryOnService _tryOnService = VirtualTryOnService();
-  final UserBaseImageService _baseImageService = UserBaseImageService();
   final SavedOutfitsRepository _savedOutfitsRepository =
       SavedOutfitsRepository();
 
-  /// Flujo completo: Genera outfits y opcionalmente imagen de Virtual Try-On
-  ///
-  /// [userPrompt] - Prompt del usuario (ej: "outfit casual para el fin de semana")
-  /// [generateImage] - Si true, genera imagen de Virtual Try-On (más costoso)
-  ///
-  /// Retorna lista de outfits generados y opcionalmente imagen de try-on
-  Future<OutfitGenerationResult> generateCompleteOutfit({
+  _UserTryOnContext? _cachedTryOnContext;
+  String? _cachedTryOnUserId;
+
+  /// Fases 1–3: genera outfits y los guarda sin imágenes de try-on.
+  Future<OutfitGenerationResult> generateOutfitSuggestions({
     required String userPrompt,
-    bool generateImage = false,
   }) async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) throw Exception("User not logged in");
+    if (uid == null) throw Exception('User not logged in');
 
     try {
-      debugPrint('🚀 Starting complete outfit generation flow');
-      debugPrint('   User prompt: "$userPrompt"');
-      debugPrint('   Generate image: $generateImage');
+      debugPrint('🚀 Outfit suggestions (phases 1–3)');
+      debugPrint('   Prompt: "$userPrompt"');
 
-      // FASE 1: Análisis de Intención
-      debugPrint('\n📋 FASE 1: Analyzing user intent...');
       final intent = await _intentAnalyzer.analyzeUserPrompt(userPrompt);
-      debugPrint('✅ Intent extracted: ${intent.toJson()}');
-
-      // FASE 2: Búsqueda y Filtrado
-      debugPrint('\n🔍 FASE 2: Filtering wardrobe...');
       final allItems = await _wardrobeRepository.getWardrobeItems();
-      debugPrint('   Total items in wardrobe: ${allItems.length}');
 
       if (allItems.isEmpty) {
         throw Exception('Your wardrobe is empty. Please add some items first.');
       }
 
-      final FilteredWardrobe filteredWardrobe =
-          WardrobeSearchAlgorithm.filterWardrobe(
-            allItems: allItems,
-            intent: intent,
-          );
-
-      debugPrint('✅ Filtered wardrobe:');
-      debugPrint('   - ${filteredWardrobe.tops.length} tops');
-      debugPrint('   - ${filteredWardrobe.bottoms.length} bottoms');
-      debugPrint('   - ${filteredWardrobe.shoes.length} shoes');
-      debugPrint('   - ${filteredWardrobe.outerwear.length} outerwear');
+      final filteredWardrobe = WardrobeSearchAlgorithm.filterWardrobe(
+        allItems: allItems,
+        intent: intent,
+      );
 
       if (filteredWardrobe.isEmpty) {
         throw Exception('No items match your request. Try different criteria.');
       }
 
-      // FASE 3: Generación de Outfits
-      debugPrint('\n🎨 FASE 3: Generating outfits with AI...');
       final outfits = await _outfitGenerator.generateOutfits(
         filteredWardrobe: filteredWardrobe,
         intent: intent,
       );
 
-      debugPrint('✅ Generated ${outfits.length} outfits');
-
-      // Validar que los outfits tengan IDs válidos
       final validOutfits = outfits.where((outfit) {
-        final hasTop = outfit.topId != null;
-        final hasBottom = outfit.bottomId != null;
-        final hasShoes = outfit.shoesId != null;
-        return hasTop && hasBottom && hasShoes;
+        return outfit.topId != null &&
+            outfit.bottomId != null &&
+            outfit.shoesId != null;
       }).toList();
 
       if (validOutfits.isEmpty) {
         throw Exception('Failed to generate valid outfits. Please try again.');
       }
 
-      debugPrint('✅ ${validOutfits.length} valid outfits');
-
-      // FASE 4: Virtual Try-On (Opcional) - Generar imágenes para los 3 outfits
-      Map<String, String> tryOnImageUrls = {};
-      if (generateImage && validOutfits.isNotEmpty) {
-        debugPrint(
-          '\n🖼️ FASE 4: Generating Virtual Try-On images for ${validOutfits.length} outfits...',
-        );
-
-        // Obtener fotos del usuario una sola vez (se reutilizan)
-        final userContext = await _getUserTryOnContext(uid);
-
-        // CICLO: Generar imagen para cada outfit (uno por uno para no sobrecargar)
-        for (int i = 0; i < validOutfits.length; i++) {
-          final outfit = validOutfits[i];
-          debugPrint(
-            '\n  📸 Generating image ${i + 1}/${validOutfits.length} for outfit: ${outfit.id}',
-          );
-
-          try {
-            // Obtener URLs de imágenes de prendas para este outfit específico
-            final itemImageUrls = await _getItemImageUrls(outfit);
-
-            if (itemImageUrls.isEmpty) {
-              debugPrint(
-                '⚠️ No item images found for outfit ${outfit.id}, skipping...',
-              );
-              continue;
-            }
-
-            // Generar imagen (usa imagen base si existe, sino usa fotos individuales)
-            final tryOnResult = await _tryOnService.generateTryOnImage(
-              request: VirtualTryOnRequest(
-                outfit: outfit,
-                itemImageUrls: itemImageUrls,
-                userBodyPhotoUrl: userContext.bodyPhotoUrl,
-                userFacePhotoUrl: userContext.facePhotoUrl,
-                identityProfile: userContext.identityProfile,
-              ),
-              userId: uid,
-            );
-
-            if (tryOnResult.generatedImageUrl.isNotEmpty) {
-              tryOnImageUrls[outfit.id] = tryOnResult.generatedImageUrl;
-              debugPrint('  ✅ Image generated for outfit ${outfit.id}');
-            } else {
-              debugPrint(
-                '  ⚠️ Failed to generate image for outfit ${outfit.id}',
-              );
-            }
-          } catch (e) {
-            debugPrint(
-              '  ❌ Error generating image for outfit ${outfit.id}: $e',
-            );
-            // Continuar con el siguiente outfit aunque este falle
-            continue;
-          }
-        }
-
-        debugPrint(
-          '✅ Virtual Try-On: ${tryOnImageUrls.length}/${validOutfits.length} images generated',
-        );
-      }
-
-      // Guardar outfits en Firestore con etiquetas y metadata
-      await _saveOutfitsToFirestore(uid, validOutfits, intent, tryOnImageUrls);
+      await _saveOutfitsToFirestore(uid, validOutfits, intent, {});
 
       return OutfitGenerationResult(
         outfits: validOutfits,
         intent: intent,
-        tryOnImageUrl: tryOnImageUrls.isNotEmpty
-            ? tryOnImageUrls.values.first
-            : null, // Backward compatibility
-        tryOnImageUrls: tryOnImageUrls,
       );
     } catch (e) {
       if (e is FirebaseAIException) {
-        debugPrint('❌ Firebase AI Error: ${e.message}');
-        debugPrint('❌ Code: $e');
         throw Exception('AI Error: ${e.message}');
-      } else {
-        debugPrint('❌ Error generating outfits: $e');
-        throw Exception('Failed to generate outfits: $e');
       }
+      if (e is Exception) rethrow;
+      throw Exception('Failed to generate outfits: $e');
     }
   }
 
-  /// Obtiene URLs de imágenes de las prendas del outfit
+  /// Try-on de un solo outfit (fase 4 bajo demanda).
+  Future<String?> generateTryOnForOutfit({
+    required GeneratedOutfit outfit,
+    required OutfitIntent intent,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw Exception('User not logged in');
+
+    try {
+      debugPrint('🖼️ Try-on for outfit ${outfit.id}');
+
+      final itemImageUrls = await _getItemImageUrls(outfit);
+      if (itemImageUrls.isEmpty) {
+        debugPrint('⚠️ No garment images for outfit ${outfit.id}');
+        return null;
+      }
+
+      final userContext = await _getUserTryOnContext(uid);
+
+      final tryOnResult = await _tryOnService.generateTryOnImage(
+        request: VirtualTryOnRequest(
+          outfit: outfit,
+          itemImageUrls: itemImageUrls,
+          userBodyPhotoUrl: userContext.bodyPhotoUrl,
+          userFacePhotoUrl: userContext.facePhotoUrl,
+          identityProfile: userContext.identityProfile,
+        ),
+        userId: uid,
+      );
+
+      final url = tryOnResult.generatedImageUrl;
+      if (url.isEmpty) return null;
+
+      await _savedOutfitsRepository.updateTryOnImageUrl(outfit.id, url);
+      debugPrint('✅ Try-on ready for ${outfit.id}');
+
+      return url;
+    } catch (e) {
+      debugPrint('❌ Try-on failed for ${outfit.id}: $e');
+      rethrow;
+    }
+  }
+
+  /// Compatibilidad: sugerencias + try-on solo del primer look si [generateImage].
+  Future<OutfitGenerationResult> generateCompleteOutfit({
+    required String userPrompt,
+    bool generateImage = false,
+  }) async {
+    final base = await generateOutfitSuggestions(userPrompt: userPrompt);
+
+    if (!generateImage || base.outfits.isEmpty) {
+      return base;
+    }
+
+    final first = base.outfits.first;
+    try {
+      final url = await generateTryOnForOutfit(
+        outfit: first,
+        intent: base.intent,
+      );
+      if (url == null || url.isEmpty) return base;
+
+      return OutfitGenerationResult(
+        outfits: base.outfits,
+        intent: base.intent,
+        tryOnImageUrl: url,
+        tryOnImageUrls: {first.id: url},
+      );
+    } catch (e) {
+      debugPrint('⚠️ First try-on failed, returning outfits without image: $e');
+      return base;
+    }
+  }
+
   Future<List<String>> _getItemImageUrls(GeneratedOutfit outfit) async {
-    final itemIds = outfit.itemIds;
     final urls = <String>[];
 
-    for (final itemId in itemIds) {
+    for (final itemId in outfit.itemIds) {
       try {
-        final doc = await _firestore
-            .collection('wardrobe_items')
-            .doc(itemId)
-            .get();
+        final doc =
+            await _firestore.collection('wardrobe_items').doc(itemId).get();
         if (doc.exists) {
           final imageUrl = doc.data()?['imageUrl'] as String?;
           if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -216,9 +185,17 @@ class OutfitService {
   }
 
   Future<_UserTryOnContext> _getUserTryOnContext(String userId) async {
+    if (_cachedTryOnUserId == userId && _cachedTryOnContext != null) {
+      return _cachedTryOnContext!;
+    }
+
     try {
       final profileData = await _profileRepository.getUserProfile(userId);
-      if (profileData == null) return const _UserTryOnContext();
+      if (profileData == null) {
+        _cachedTryOnContext = const _UserTryOnContext();
+        _cachedTryOnUserId = userId;
+        return _cachedTryOnContext!;
+      }
 
       final identityProfile = IdentityProfile.fromFirestoreUser(profileData);
 
@@ -230,18 +207,19 @@ class OutfitService {
           ? (profileData['facePhotos'] as List<dynamic>).firstOrNull?.toString()
           : null;
 
-      return _UserTryOnContext(
+      _cachedTryOnContext = _UserTryOnContext(
         bodyPhotoUrl: bodyPhoto,
         facePhotoUrl: facePhoto,
         identityProfile: identityProfile.isEmpty ? null : identityProfile,
       );
+      _cachedTryOnUserId = userId;
+      return _cachedTryOnContext!;
     } catch (e) {
       debugPrint('⚠️ Failed to get user try-on context: $e');
       return const _UserTryOnContext();
     }
   }
 
-  /// Guarda outfits generados en Firestore con etiquetas y metadata
   Future<void> _saveOutfitsToFirestore(
     String userId,
     List<GeneratedOutfit> outfits,
@@ -249,36 +227,21 @@ class OutfitService {
     Map<String, String> tryOnImageUrls,
   ) async {
     try {
-      debugPrint(
-        '💾 Saving ${outfits.length} outfits to Firestore with tags...',
-      );
+      final savedOutfits = outfits
+          .map(
+            (outfit) => SavedOutfit.fromGeneratedOutfit(
+              outfit: outfit,
+              intent: intent,
+              userId: userId,
+              tryOnImageUrl: tryOnImageUrls[outfit.id] ?? '',
+            ),
+          )
+          .toList();
 
-      final savedOutfits = <SavedOutfit>[];
-
-      for (final outfit in outfits) {
-        // Obtener URL de imagen para este outfit
-        final imageUrl = tryOnImageUrls[outfit.id] ?? '';
-
-        // Crear SavedOutfit con todas las etiquetas y metadata
-        final savedOutfit = SavedOutfit.fromGeneratedOutfit(
-          outfit: outfit,
-          intent: intent,
-          userId: userId,
-          tryOnImageUrl: imageUrl,
-        );
-
-        savedOutfits.add(savedOutfit);
-      }
-
-      // Guardar en batch
       await _savedOutfitsRepository.saveOutfits(savedOutfits);
-
-      debugPrint(
-        '✅ Saved ${savedOutfits.length} outfits to Firestore with tags',
-      );
+      debugPrint('✅ Saved ${savedOutfits.length} outfits to Firestore');
     } catch (e) {
       debugPrint('⚠️ Failed to save outfits to Firestore: $e');
-      // No lanzar error - es opcional, pero loguear para debugging
     }
   }
 }
@@ -295,12 +258,12 @@ class _UserTryOnContext {
   });
 }
 
-/// Resultado de la generación completa de outfit
+/// Resultado de la generación de outfits
 class OutfitGenerationResult {
   final List<GeneratedOutfit> outfits;
   final OutfitIntent intent;
-  final String? tryOnImageUrl; // Deprecated: usar tryOnImageUrls
-  final Map<String, String> tryOnImageUrls; // Map<outfitId, imageUrl>
+  final String? tryOnImageUrl;
+  final Map<String, String> tryOnImageUrls;
 
   OutfitGenerationResult({
     required this.outfits,
@@ -309,7 +272,6 @@ class OutfitGenerationResult {
     Map<String, String>? tryOnImageUrls,
   }) : tryOnImageUrls = tryOnImageUrls ?? {};
 
-  /// Obtiene la URL de imagen para un outfit específico
   String? getImageUrlForOutfit(String outfitId) {
     return tryOnImageUrls[outfitId] ?? tryOnImageUrl;
   }

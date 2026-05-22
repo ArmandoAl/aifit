@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/chat_models.dart';
 import '../../domain/stylist_intent_state.dart';
+import '../../../outfit/domain/outfit_models.dart';
 
 abstract class ChatState extends Equatable {
   const ChatState();
@@ -19,6 +20,7 @@ class ChatLoaded extends ChatState {
   final bool isGenerating;
   final StylistIntentState accumulatedIntent;
   final bool readyToGenerate;
+  final OutfitIntent? lastOutfitIntent;
 
   const ChatLoaded({
     required this.messages,
@@ -26,6 +28,7 @@ class ChatLoaded extends ChatState {
     this.isGenerating = false,
     this.accumulatedIntent = const StylistIntentState(),
     this.readyToGenerate = false,
+    this.lastOutfitIntent,
   });
 
   ChatLoaded copyWith({
@@ -34,6 +37,7 @@ class ChatLoaded extends ChatState {
     bool? isGenerating,
     StylistIntentState? accumulatedIntent,
     bool? readyToGenerate,
+    OutfitIntent? lastOutfitIntent,
   }) {
     return ChatLoaded(
       messages: messages ?? this.messages,
@@ -41,6 +45,7 @@ class ChatLoaded extends ChatState {
       isGenerating: isGenerating ?? this.isGenerating,
       accumulatedIntent: accumulatedIntent ?? this.accumulatedIntent,
       readyToGenerate: readyToGenerate ?? this.readyToGenerate,
+      lastOutfitIntent: lastOutfitIntent ?? this.lastOutfitIntent,
     );
   }
 
@@ -51,5 +56,6 @@ class ChatLoaded extends ChatState {
         isGenerating,
         accumulatedIntent,
         readyToGenerate,
+        lastOutfitIntent,
       ];
 }

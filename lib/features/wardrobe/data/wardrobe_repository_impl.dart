@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/platform/app_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/interfaces/ai_service.dart';
@@ -55,18 +55,18 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
     }
   }
 
-  Future<void> addWardrobeItem(File imageFile) async {
+  Future<void> addWardrobeItem(AppImage image) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw Exception("User not logged in");
 
     // 1. Subir imagen a Storage
     final imageUrl = await _storageService.uploadWardrobeItem(
       userId: uid,
-      file: imageFile,
+      image: image,
     );
 
     final aiData = await _aiService.analyzeImageToJson(
-      image: imageFile,
+      image: image,
       promptInstruction: WardrobeAnalysisPrompt.fullAnalysis,
     );
 
@@ -80,7 +80,7 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
 
   /// Add wardrobe item with user-provided data (from form)
   Future<void> addWardrobeItemWithData({
-    required File imageFile,
+    required AppImage image,
     required String type,
     required String subType,
     String? brand,
@@ -98,16 +98,15 @@ class WardrobeRepositoryImpl implements WardrobeRepository {
     debugPrint('📤 Uploading image to Storage...');
     final imageUrl = await _storageService.uploadWardrobeItem(
       userId: uid,
-      file: imageFile,
+      image: image,
     );
     debugPrint('✅ Image uploaded: $imageUrl');
 
-    // 2. Optionally analyze with AI for colors/style (non-blocking)
     List<String> colors = [];
     List<String> styleTags = [];
     try {
       final aiData = await _aiService.analyzeImageToJson(
-        image: imageFile,
+        image: image,
         promptInstruction: WardrobeAnalysisPrompt.colorsAndStyleOnly,
       );
 

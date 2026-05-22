@@ -1,7 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/platform/image_preview.dart';
+import '../../../../core/platform/app_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -10,7 +11,7 @@ import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
 
 class AddWardrobeItemPage extends StatefulWidget {
-  final List<File>? initialImages;
+  final List<AppImage>? initialImages;
 
   const AddWardrobeItemPage({super.key, this.initialImages});
 
@@ -22,7 +23,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
   final ImagePicker _picker = ImagePicker();
   final WardrobeRepositoryImpl _repository = WardrobeRepositoryImpl();
 
-  final List<File> _selectedImages = [];
+  final List<AppImage> _selectedImages = [];
   final List<ItemFormData> _formDataList = [];
 
   bool _isUploading = false;
@@ -52,8 +53,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
 
     if (widget.initialImages != null && widget.initialImages!.isNotEmpty) {
       for (var img in widget.initialImages!) {
-        debugPrint('   - Image path: ${img.path}');
-        debugPrint('   - Image exists: ${img.existsSync()}');
+        debugPrint('   - Image key: ${img.storageKey}');
       }
 
       _selectedImages.addAll(widget.initialImages!);
@@ -68,8 +68,10 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
     final List<XFile> images = await _picker.pickMultiImage(imageQuality: 85);
 
     if (images.isNotEmpty) {
+      final sources = await AppImage.fromXFiles(images);
+      if (!mounted) return;
       setState(() {
-        _selectedImages.addAll(images.map((x) => File(x.path)));
+        _selectedImages.addAll(sources);
         _formDataList.addAll(images.map((_) => ItemFormData()));
       });
     }
@@ -124,7 +126,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
 
         // Upload image and save to Firestore
         await _repository.addWardrobeItemWithData(
-          imageFile: image,
+          image: image,
           type: formData.type!,
           subType: formData.subType!,
           brand: formData.brand,
@@ -266,12 +268,9 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
           Container(
             height: 300,
             width: double.infinity,
-            decoration: BoxDecoration(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              image: DecorationImage(
-                image: FileImage(_selectedImages[0]),
-                fit: BoxFit.cover,
-              ),
+              child: imageSourcePreview(_selectedImages[0], fit: BoxFit.cover),
             ),
           ),
           const SizedBox(height: 24),
@@ -295,13 +294,13 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image preview
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: FileImage(_selectedImages[index]),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 200,
+                    width: double.infinity,
+                    child: imageSourcePreview(
+                      _selectedImages[index],
                       fit: BoxFit.cover,
                     ),
                   ),

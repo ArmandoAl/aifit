@@ -1,17 +1,20 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../outfit/domain/try_on_status.dart';
 import '../../domain/chat_models.dart';
 
 class StylistOutfitPreviewCard extends StatelessWidget {
   final ChatOutfitPreview preview;
   final VoidCallback? onTap;
+  final VoidCallback? onTryOnRequest;
   final bool compact;
 
   const StylistOutfitPreviewCard({
     super.key,
     required this.preview,
     this.onTap,
+    this.onTryOnRequest,
     this.compact = false,
   });
 
@@ -41,14 +44,24 @@ class StylistOutfitPreviewCard extends StatelessWidget {
           children: [
             Expanded(
               flex: 7,
-              child: hasImage
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const _ShimmerBox(),
-                      errorWidget: (_, __, ___) => const _PlaceholderImage(),
-                    )
-                  : const _PlaceholderImage(),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  hasImage
+                      ? CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => const _ShimmerBox(),
+                          errorWidget: (_, __, ___) =>
+                              const _PlaceholderImage(),
+                        )
+                      : const _PlaceholderImage(),
+                  _TryOnStatusOverlay(
+                    status: preview.tryOnStatus,
+                    onTryOnRequest: onTryOnRequest,
+                  ),
+                ],
+              ),
             ),
             Expanded(
               flex: 4,
@@ -154,14 +167,24 @@ class StylistOutfitPreviewCard extends StatelessWidget {
             children: [
               AspectRatio(
                 aspectRatio: 3 / 4,
-                child: hasImage
-                    ? CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => const _ShimmerBox(),
-                        errorWidget: (_, __, ___) => const _PlaceholderImage(),
-                      )
-                    : const _PlaceholderImage(),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    hasImage
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const _ShimmerBox(),
+                            errorWidget: (_, __, ___) =>
+                                const _PlaceholderImage(),
+                          )
+                        : const _PlaceholderImage(),
+                    _TryOnStatusOverlay(
+                      status: preview.tryOnStatus,
+                      onTryOnRequest: onTryOnRequest,
+                    ),
+                  ],
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -252,5 +275,73 @@ class _PlaceholderImage extends StatelessWidget {
         child: Icon(Icons.checkroom_outlined, size: 40, color: Colors.grey),
       ),
     );
+  }
+}
+
+class _TryOnStatusOverlay extends StatelessWidget {
+  final TryOnStatus status;
+  final VoidCallback? onTryOnRequest;
+
+  const _TryOnStatusOverlay({
+    required this.status,
+    this.onTryOnRequest,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case TryOnStatus.generating:
+        return Container(
+          color: Colors.black38,
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Generando vista…',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        );
+      case TryOnStatus.readyForTryOn:
+      case TryOnStatus.failed:
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Material(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                onTap: onTryOnRequest,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Text(
+                    status == TryOnStatus.failed
+                        ? 'Reintentar try-on'
+                        : 'Generar try-on',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

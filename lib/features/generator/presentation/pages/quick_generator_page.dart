@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import '../../../../core/platform/app_image.dart';
+import '../../../../core/platform/image_preview.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/keyboard_utils.dart';
 
@@ -14,7 +15,7 @@ class QuickGeneratorPage extends StatefulWidget {
 class _QuickGeneratorPageState extends State<QuickGeneratorPage> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _promptController = TextEditingController();
-  final List<File> _inspirationPhotos = [];
+  final List<AppImage> _inspirationPhotos = [];
   final int _maxPhotos = 3;
   bool _isGenerating = false;
 
@@ -55,8 +56,10 @@ class _QuickGeneratorPageState extends State<QuickGeneratorPage> {
     );
 
     if (image != null) {
+      final picked = await AppImage.fromXFile(image);
+      if (!mounted) return;
       setState(() {
-        _inspirationPhotos.add(File(image.path));
+        _inspirationPhotos.add(picked);
       });
     }
   }
@@ -323,13 +326,11 @@ class _QuickGeneratorPageState extends State<QuickGeneratorPage> {
                       margin: const EdgeInsets.only(right: 12),
                       child: Stack(
                         children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(
-                                image: FileImage(_inspirationPhotos[index]),
-                                fit: BoxFit.cover,
-                              ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: imageSourcePreview(
+                              _inspirationPhotos[index],
+                              fit: BoxFit.cover,
                             ),
                           ),
                           Positioned(

@@ -8,6 +8,7 @@ import '../bloc/outfit_generation_bloc.dart';
 import '../bloc/outfit_generation_event.dart';
 import '../bloc/outfit_generation_state.dart';
 import '../../domain/outfit_models.dart';
+import '../../domain/try_on_status.dart';
 import '../../../stylist/domain/chat_models.dart' as chat_models;
 
 /// Página para generar outfits usando IA
@@ -134,7 +135,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                     child: SwitchListTile(
                       title: const Text('Generate preview image'),
                       subtitle: const Text(
-                        'Create a visual preview of the outfit (takes longer, uses more credits)',
+                        'Genera la vista del primer look al instante; los demás quedan listos para try-on bajo demanda.',
                       ),
                       value: _generateImage,
                       onChanged: state is OutfitGenerationLoading
@@ -240,19 +241,26 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
         ...state.outfits.asMap().entries.map((entry) {
           final index = entry.key;
           final outfit = entry.value;
-          // Obtener la imagen específica para este outfit
-          final imageUrl = state.getImageUrlForOutfit(outfit.id);
-          return _buildOutfitCard(outfit, index + 1, imageUrl);
+          return _buildOutfitCard(
+            context,
+            state,
+            outfit,
+            index + 1,
+          );
         }),
       ],
     );
   }
 
   Widget _buildOutfitCard(
+    BuildContext context,
+    OutfitGenerationLoaded state,
     GeneratedOutfit outfit,
     int index,
-    String? tryOnImageUrl,
   ) {
+    final tryOnImageUrl = state.getImageUrlForOutfit(outfit.id);
+    final status = state.statusFor(outfit.id);
+    final error = state.tryOnErrors[outfit.id];
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -314,36 +322,14 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             ),
             const SizedBox(height: 16),
 
-            // Try-On Image (si existe)
-            if (tryOnImageUrl != null && tryOnImageUrl.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  tryOnImageUrl,
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 300,
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 300,
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: Icon(Icons.error_outline, size: 48),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+            _buildTryOnSection(
+              context: context,
+              outfitId: outfit.id,
+              imageUrl: tryOnImageUrl,
+              status: status,
+              error: error,
+            ),
+            const SizedBox(height: 16),
 
             // Explanation
             Text(outfit.explanation, style: const TextStyle(fontSize: 14)),
@@ -394,16 +380,17 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Implementar generación de imagen para este outfit específico
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Try-on image generation coming soon!'),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.image),
-                    label: const Text('Try On'),
+                    onPressed: _canRequestTryOn(status)
+                        ? () {
+                            context.read<OutfitGenerationBloc>().add(
+                                  GenerateTryOnImageRequested(
+                                    outfitId: outfit.id,
+                                  ),
+                                );
+                          }
+                        : null,
+                    icon: Icon(_tryOnButtonIcon(status)),
+                    label: Text(_tryOnButtonLabel(status)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondary,
                       foregroundColor: Colors.white,
@@ -416,5 +403,131 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
         ),
       ),
     );
+  }
+
+  bool _canRequestTryOn(TryOnStatus status) {
+    return status == TryOnStatus.readyForTryOn ||
+        status == TryOnStatus.failed ||
+        status == TryOnStatus.none;
+  }
+
+  IconData _tryOnButtonIcon(TryOnStatus status) {
+    return switch (status) {
+      TryOnStatus.generating => Icons.hourglass_top,
+      TryOnStatus.ready => Icons.check_circle_outline,
+      _ => Icons.image,
+    };
+  }
+
+  String _tryOnButtonLabel(TryOnStatus status) {
+    return switch (status) {
+      TryOnStatus.generating => 'Generando…',
+      TryOnStatus.ready => 'Vista lista',
+      TryOnStatus.readyForTryOn => 'Try-on',
+      TryOnStatus.failed => 'Reintentar',
+      TryOnStatus.none => 'Try-on',
+    };
+  }
+
+  Widget _buildTryOnSection({
+    required BuildContext context,
+    required String outfitId,
+    required String? imageUrl,
+    required TryOnStatus status,
+    required String? error,
+  }) {
+    if (status == TryOnStatus.ready &&
+        imageUrl != null &&
+        imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: 300,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 300,
+              color: Colors.grey[200],
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              height: 300,
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(Icons.error_outline, size: 48),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (status == TryOnStatus.generating) {
+      return Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text('Generando vista try-on…'),
+          ],
+        ),
+      );
+    }
+
+    if (status == TryOnStatus.readyForTryOn) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.secondary.withValues(alpha: 0.25),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: AppColors.secondary),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Listo para try-on — pulsa el botón para generar la vista.',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (status == TryOnStatus.failed) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          error ?? 'No se pudo generar la vista',
+          style: const TextStyle(color: AppColors.error, fontSize: 13),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }

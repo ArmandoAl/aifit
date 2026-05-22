@@ -1,21 +1,22 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:firebase_ai/firebase_ai.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
+
 import '../../../core/constants/identity_consistency_prompt.dart';
+import '../../../core/platform/network_image_loader.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/utils/identity_photo_collage.dart';
 import '../../../core/utils/image_compression_util.dart';
 import '../../profile/domain/user_identity_profile.dart';
 import '../../profile/services/user_identity_analysis_service.dart';
 
-/// Genera y gestiona la imagen base del usuario para Virtual Try-On.
 class UserBaseImageService {
   final FirebaseFirestore _firestore = FirestoreService.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final StorageService _storageService = StorageService();
   final Dio _dio = Dio();
   final UserIdentityAnalysisService _identityService =
       UserIdentityAnalysisService();
@@ -50,7 +51,7 @@ class UserBaseImageService {
         collageUrl = await _getIdentityCollageUrl(userId);
       }
 
-      final Uint8List collageBytes = await _resolveCollageBytes(
+      final collageBytes = await _resolveCollageBytes(
         collageUrl: collageUrl,
         facePhotoUrls: facePhotoUrls,
         bodyPhotoUrls: bodyPhotoUrls,
@@ -92,22 +93,20 @@ class UserBaseImageService {
         ],
       );
 
-      final parts = <Part>[
-        InlineDataPart('image/jpeg', identityPayload),
-        TextPart(prompt),
-      ];
-      debugPrint('🖼️ Base image input: 1 identity collage (high quality)');
+      final response = await model.generateContent([
+        Content.multi([
+          InlineDataPart('image/jpeg', identityPayload),
+          TextPart(prompt),
+        ]),
+      ]);
 
-      final response = await model.generateContent([Content.multi(parts)]);
-
-      final baseImageFile = await _extractAndSaveBaseImage(response, userId);
-      final imageUrl = await _uploadBaseImageToStorage(userId, baseImageFile);
+      final imageBytes = _extractImageBytes(response);
+      final imageUrl = await _storageService.uploadUserBaseImage(
+        userId: userId,
+        bytes: imageBytes,
+      );
 
       await _saveBaseImageUrlToFirestore(userId, imageUrl);
-
-      try {
-        await baseImageFile.delete();
-      } catch (_) {}
 
       debugPrint('✅ User base image successfully created: $imageUrl');
       return imageUrl;
@@ -126,41 +125,34 @@ class UserBaseImageService {
   }) async {
     if (collageUrl != null && collageUrl.isNotEmpty) {
       try {
-        final response = await _dio.get(
-          collageUrl,
-          options: Options(responseType: ResponseType.bytes),
-        );
-        return Uint8List.fromList(response.data as List<int>);
+        return NetworkImageLoader.downloadBytes(_dio, collageUrl);
       } catch (e) {
         debugPrint('⚠️ Could not download stored collage, rebuilding: $e');
       }
     }
 
-    final tempDir = await getTemporaryDirectory();
-    final faceFiles = <File>[];
-    final bodyFiles = <File>[];
+    final faceBytes = <Uint8List>[];
+    final bodyBytes = <Uint8List>[];
 
     for (final url in facePhotoUrls.take(4)) {
-      final f = await _downloadPhoto(tempDir.path, 'face', url);
-      if (f != null) faceFiles.add(f);
-    }
-    for (final url in bodyPhotoUrls.take(4)) {
-      final f = await _downloadPhoto(tempDir.path, 'body', url);
-      if (f != null) bodyFiles.add(f);
-    }
-
-    try {
-      return IdentityPhotoCollage.buildVertical(
-        facePhotos: faceFiles,
-        bodyPhotos: bodyFiles,
-      );
-    } finally {
-      for (final f in [...faceFiles, ...bodyFiles]) {
-        try {
-          await f.delete();
-        } catch (_) {}
+      try {
+        faceBytes.add(await NetworkImageLoader.downloadBytes(_dio, url));
+      } catch (e) {
+        debugPrint('⚠️ Failed to download face photo: $e');
       }
     }
+    for (final url in bodyPhotoUrls.take(4)) {
+      try {
+        bodyBytes.add(await NetworkImageLoader.downloadBytes(_dio, url));
+      } catch (e) {
+        debugPrint('⚠️ Failed to download body photo: $e');
+      }
+    }
+
+    return IdentityPhotoCollage.buildVertical(
+      facePhotos: faceBytes,
+      bodyPhotos: bodyBytes,
+    );
   }
 
   Future<String?> _getExistingBaseImage(String userId) async {
@@ -184,27 +176,6 @@ class UserBaseImageService {
       return IdentityProfile.fromFirestoreUser(doc.data());
     } catch (e) {
       debugPrint('⚠️ Could not load identity profile: $e');
-      return null;
-    }
-  }
-
-  Future<File?> _downloadPhoto(
-    String dirPath,
-    String prefix,
-    String url,
-  ) async {
-    try {
-      final file = File(
-        '$dirPath/${prefix}_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      final response = await _dio.get(
-        url,
-        options: Options(responseType: ResponseType.bytes),
-      );
-      await file.writeAsBytes(response.data);
-      return file;
-    } catch (e) {
-      debugPrint('⚠️ Failed to download $prefix photo: $e');
       return null;
     }
   }
@@ -247,40 +218,20 @@ Premium virtual try-on base template. Realistic, neutral, identity-accurate.
 """;
   }
 
-  Future<File> _extractAndSaveBaseImage(
-    GenerateContentResponse response,
-    String userId,
-  ) async {
-    final tempDir = await getTemporaryDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final imageFile = File('${tempDir.path}/base_gen_${userId}_$timestamp.jpg');
-
+  Uint8List _extractImageBytes(GenerateContentResponse response) {
     if (response.candidates.isNotEmpty) {
       for (final part in response.candidates.first.content.parts) {
         if (part is InlineDataPart && part.mimeType.startsWith('image/')) {
-          await imageFile.writeAsBytes(part.bytes);
-          return imageFile;
+          return part.bytes;
         }
       }
     }
 
     if (response.inlineDataParts.isNotEmpty) {
-      await imageFile.writeAsBytes(response.inlineDataParts.first.bytes);
-      return imageFile;
+      return response.inlineDataParts.first.bytes;
     }
 
     throw Exception('No image returned from base image generation');
-  }
-
-  Future<String> _uploadBaseImageToStorage(
-    String userId,
-    File imageFile,
-  ) async {
-    final path =
-        'users/$userId/base_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final ref = _storage.ref().child(path);
-    await ref.putFile(imageFile);
-    return ref.getDownloadURL();
   }
 
   Future<void> _saveBaseImageUrlToFirestore(
@@ -297,7 +248,6 @@ Premium virtual try-on base template. Realistic, neutral, identity-accurate.
     return _getExistingBaseImage(userId);
   }
 
-  /// Removes base image from Storage and Firestore (identity profile kept).
   Future<void> deleteUserBaseImage(String userId) async {
     try {
       final doc = await _firestore.collection('users').doc(userId).get();
@@ -305,7 +255,7 @@ Premium virtual try-on base template. Realistic, neutral, identity-accurate.
 
       if (existingUrl != null && existingUrl.isNotEmpty) {
         try {
-          await _storage.refFromURL(existingUrl).delete();
+          await _storageService.deletePhoto(existingUrl);
         } catch (e) {
           debugPrint('⚠️ Could not delete base image from Storage: $e');
         }

@@ -1,17 +1,19 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+
 import '../../../core/interfaces/ai_service.dart';
-import '../../../core/utils/image_compression_util.dart';
+import '../../../core/platform/app_image.dart';
+import '../../../core/platform/network_image_loader.dart';
 import '../../../core/services/firebase_ai_service_impl.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/utils/identity_photo_collage.dart';
+import '../../../core/utils/image_compression_util.dart';
 import '../domain/user_identity_profile.dart';
 
-/// Identity pipeline: local collage → AI JSON profile → Firestore + Storage.
 class UserIdentityAnalysisService {
   final AIService _aiService;
   final FirebaseFirestore _firestore;
@@ -23,10 +25,10 @@ class UserIdentityAnalysisService {
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
     Dio? dio,
-  }) : _aiService = aiService ?? FirebaseAIServiceImpl(),
-       _firestore = firestore ?? FirestoreService.instance,
-       _storage = storage ?? FirebaseStorage.instance,
-       _dio = dio ?? Dio();
+  })  : _aiService = aiService ?? FirebaseAIServiceImpl(),
+        _firestore = firestore ?? FirestoreService.instance,
+        _storage = storage ?? FirebaseStorage.instance,
+        _dio = dio ?? Dio();
 
   static const _identityAnalysisPrompt = '''
 You are a professional biometric and body-proportion analyst for fashion virtual try-on.
@@ -46,7 +48,6 @@ Return ONLY valid JSON with this structure (snake_case, all fields optional but 
 Rules: concise, deterministic, infer ethnicity consistency from visible features without stereotyping labels in output.
 ''';
 
-  /// Full identity analysis: collage (local) + Gemini JSON profile + Firestore.
   Future<IdentityProfile?> analyzeUserIdentity({
     required String userId,
     List<String> facePhotoUrls = const [],
@@ -56,36 +57,25 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
     final validBody = _filterUrls(bodyPhotoUrls);
     if (validFace.isEmpty && validBody.isEmpty) return null;
 
-    final tempDir = await getTemporaryDirectory();
-    final downloaded = <File>[];
-    IdentityProfile? profile;
-
     try {
-      final faceFiles = await _downloadPhotos(validFace, tempDir.path, 'face');
-      final bodyFiles = await _downloadPhotos(validBody, tempDir.path, 'body');
-      downloaded.addAll(faceFiles);
-      downloaded.addAll(bodyFiles);
+      final faceBytes = await _downloadPhotoBytes(validFace);
+      final bodyBytes = await _downloadPhotoBytes(validBody);
 
-      if (downloaded.isEmpty) return null;
+      if (faceBytes.isEmpty && bodyBytes.isEmpty) return null;
 
       final collageBytes = await IdentityPhotoCollage.buildVertical(
-        facePhotos: faceFiles,
-        bodyPhotos: bodyFiles,
+        facePhotos: faceBytes,
+        bodyPhotos: bodyBytes,
       );
 
       final collageUrl = await _uploadCollage(userId, collageBytes);
 
-      final collageFile = File(
-        '${tempDir.path}/collage_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      await collageFile.writeAsBytes(collageBytes);
-
       final raw = await _aiService.analyzeImageToJson(
-        image: collageFile,
+        image: AppImage(bytes: collageBytes, name: 'collage.jpg'),
         promptInstruction: _identityAnalysisPrompt,
         imagePayload: AiImagePayload.identity,
       );
-      profile = IdentityProfile.fromJson(raw);
+      final profile = IdentityProfile.fromJson(raw);
 
       if (profile.isEmpty) {
         debugPrint('⚠️ Identity analysis returned empty profile');
@@ -106,16 +96,9 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
     } catch (e) {
       debugPrint('❌ analyzeUserIdentity failed: $e');
       return null;
-    } finally {
-      for (final f in downloaded) {
-        try {
-          await f.delete();
-        } catch (_) {}
-      }
     }
   }
 
-  /// Backward-compatible entry point used after photo upload.
   Future<void> analyzeAndSaveProfiles({
     required String userId,
     List<String> facePhotoUrls = const [],
@@ -132,34 +115,23 @@ Rules: concise, deterministic, infer ethnicity consistency from visible features
     return urls.where((u) => u.isNotEmpty && !u.startsWith('mock://')).toList();
   }
 
-  Future<List<File>> _downloadPhotos(
-    List<String> urls,
-    String dirPath,
-    String prefix,
-  ) async {
-    final files = <File>[];
+  Future<List<Uint8List>> _downloadPhotoBytes(List<String> urls) async {
+    final list = <Uint8List>[];
     for (var i = 0; i < urls.length && i < 4; i++) {
       try {
-        final file = File('$dirPath/${prefix}_$i.jpg');
-        final response = await _dio.get(
-          urls[i],
-          options: Options(responseType: ResponseType.bytes),
-        );
-        await file.writeAsBytes(response.data as List<int>);
-        files.add(file);
+        list.add(await NetworkImageLoader.downloadBytes(_dio, urls[i]));
       } catch (e) {
-        debugPrint('⚠️ Failed to download $prefix photo $i: $e');
+        debugPrint('⚠️ Failed to download photo $i: $e');
       }
     }
-    return files;
+    return list;
   }
 
-  Future<String> _uploadCollage(String userId, List<int> bytes) async {
+  Future<String> _uploadCollage(String userId, Uint8List bytes) async {
     final path =
         'users/$userId/identity_collage_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final ref = _storage.ref().child(path);
-    final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-    await ref.putData(data, SettableMetadata(contentType: 'image/jpeg'));
+    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
     return ref.getDownloadURL();
   }
 }

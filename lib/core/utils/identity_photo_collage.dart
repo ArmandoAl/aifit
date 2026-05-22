@@ -1,14 +1,10 @@
-import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:image/image.dart' as img;
 
-/// Deterministic vertical identity collage (local only, no AI).
-///
-/// Layout (top → bottom):
-/// 1. Front face
-/// 2. 3/4 face
-/// 3. Full body front
-/// 4. Full body side
+import '../platform/app_image.dart';
+
+/// Collage vertical de identidad (solo bytes, sin disco).
 class IdentityPhotoCollage {
   IdentityPhotoCollage._();
 
@@ -16,36 +12,31 @@ class IdentityPhotoCollage {
   static const int rowHeight = 512;
   static const int rowCount = 4;
   static const int canvasHeight = rowHeight * rowCount;
-  static const int rowSpacing = 8;
   static const int identityJpegQuality = 93;
 
   static final _background = img.ColorRgb8(245, 245, 245);
 
-  /// Ordered slots: front face, 3/4 face, body front, body side.
   static Future<Uint8List> buildVertical({
-    required List<File> facePhotos,
-    required List<File> bodyPhotos,
+    required List<Uint8List> facePhotos,
+    required List<Uint8List> bodyPhotos,
   }) async {
-    final slots = <File?>[
+    final slots = <Uint8List?>[
       facePhotos.isNotEmpty ? facePhotos[0] : null,
       facePhotos.length > 1 ? facePhotos[1] : facePhotos.firstOrNull,
       bodyPhotos.isNotEmpty ? bodyPhotos[0] : null,
       bodyPhotos.length > 1 ? bodyPhotos[1] : bodyPhotos.firstOrNull,
     ];
 
-    final fallback = slots.firstWhere(
-      (f) => f != null,
-      orElse: () => null,
-    );
+    final fallback = slots.firstWhere((b) => b != null, orElse: () => null);
 
     final canvas = img.Image(width: canvasWidth, height: canvasHeight);
     img.fill(canvas, color: _background);
 
     for (var i = 0; i < rowCount; i++) {
-      final file = slots[i] ?? fallback;
-      if (file == null) continue;
+      final bytes = slots[i] ?? fallback;
+      if (bytes == null) continue;
 
-      final rowImage = await _fitToRow(file);
+      final rowImage = _fitToRow(bytes);
       img.compositeImage(canvas, rowImage, dstX: 0, dstY: i * rowHeight);
     }
 
@@ -54,36 +45,40 @@ class IdentityPhotoCollage {
     );
   }
 
-  /// Legacy API — maps files in order to vertical slots when only one list given.
-  static Future<Uint8List> buildFromFiles(List<File> files) async {
-    if (files.isEmpty) {
+  static Future<Uint8List> buildFromSources(List<AppImage> sources) async {
+    if (sources.isEmpty) {
       throw ArgumentError('At least one photo required for collage');
     }
-    final face = files.take(2).toList();
-    final body = files.length > 2 ? files.skip(2).take(2).toList() : <File>[];
-    if (body.isEmpty && files.length >= 2) {
+    final face = sources.take(2).map((s) => s.bytes).toList();
+    final body = sources.length > 2
+        ? sources.skip(2).take(2).map((s) => s.bytes).toList()
+        : <Uint8List>[];
+    if (body.isEmpty && sources.length >= 2) {
+      final half = (sources.length / 2).ceil();
       return buildVertical(
-        facePhotos: files.take((files.length / 2).ceil()).toList(),
-        bodyPhotos: files.skip((files.length / 2).ceil()).toList(),
+        facePhotos: sources.take(half).map((s) => s.bytes).toList(),
+        bodyPhotos: sources.skip(half).map((s) => s.bytes).toList(),
       );
     }
-    return buildVertical(facePhotos: face, bodyPhotos: body.isNotEmpty ? body : face);
+    return buildVertical(
+      facePhotos: face,
+      bodyPhotos: body.isNotEmpty ? body : face,
+    );
   }
 
-  static Future<img.Image> _fitToRow(File file) async {
-    final bytes = await file.readAsBytes();
+  static img.Image _fitToRow(Uint8List bytes) {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) {
-      throw Exception('Could not decode: ${file.path}');
+      throw Exception('Could not decode image bytes');
     }
 
-    final targetW = canvasWidth - 16;
-    final targetH = rowHeight - 16;
+    const targetW = canvasWidth - 16;
+    const targetH = rowHeight - 16;
     final scale = (targetW / decoded.width).clamp(0.0, 2.0);
     final scaleH = targetH / decoded.height;
     final factor = scale < scaleH ? scale : scaleH;
 
-    var resized = img.copyResize(
+    final resized = img.copyResize(
       decoded,
       width: (decoded.width * factor).round().clamp(1, targetW),
       height: (decoded.height * factor).round().clamp(1, targetH),

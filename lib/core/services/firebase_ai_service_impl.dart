@@ -1,37 +1,34 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:aifit/paths.dart';
+
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
+
+import '../interfaces/ai_service.dart';
+import '../platform/app_image.dart';
 import '../utils/image_compression_util.dart';
 
 class FirebaseAIServiceImpl implements AIService {
   @override
   Future<AIResponse> generateContent({
     required String prompt,
-    List<File>? images,
+    List<AppImage>? images,
     String? modelId,
   }) async {
     try {
-      // 1. Obtener el modelo (gemini-2.5-flash es rápido y gratuito)
       final model = FirebaseAI.vertexAI().generativeModel(
         model: modelId ?? 'gemini-2.5-flash',
       );
 
-      // 2. Construir el contenido (Texto + Imágenes)
       final parts = <Part>[TextPart(prompt)];
 
       if (images != null) {
-        for (var file in images) {
-          final bytes = await ImageCompressionUtil.compressGarment(file);
+        for (final image in images) {
+          final bytes = await ImageCompressionUtil.compressGarment(image);
           parts.add(InlineDataPart('image/jpeg', bytes));
         }
       }
 
-      final content = [Content.multi(parts)];
-
-      // 3. Llamada a la API
-      final response = await model.generateContent(content);
+      final response = await model.generateContent([Content.multi(parts)]);
 
       return AIResponse(
         text: response.text ?? "Lo siento, no pude generar una respuesta.",
@@ -43,13 +40,11 @@ class FirebaseAIServiceImpl implements AIService {
 
   @override
   Future<Map<String, dynamic>> analyzeImageToJson({
-    required File image,
+    required AppImage image,
     required String promptInstruction,
     AiImagePayload imagePayload = AiImagePayload.garment,
   }) async {
     try {
-      // Prendas: Flash (rápido y suficiente para JSON de wardrobe).
-      // Identidad (collage): Pro para perfil biométrico más detallado.
       final modelName = imagePayload == AiImagePayload.garment
           ? 'gemini-2.5-flash'
           : 'gemini-2.5-pro';
@@ -61,10 +56,13 @@ class FirebaseAIServiceImpl implements AIService {
         ),
       );
 
-      final bytes = await ImageCompressionUtil.compress(
-        image,
-        payload: imagePayload,
-      );
+      final bytes = imagePayload == AiImagePayload.raw
+          ? image.bytes
+          : await ImageCompressionUtil.compressBytes(
+              image.bytes,
+              payload: imagePayload,
+            );
+
       final content = [
         Content.multi([
           TextPart(promptInstruction),
@@ -77,7 +75,6 @@ class FirebaseAIServiceImpl implements AIService {
 
       if (jsonString == null) throw Exception("Respuesta vacía de IA");
 
-      // Limpieza preventiva por si el modelo incluye markdown ```json ... ```
       final cleanJson = jsonString
           .replaceAll('```json', '')
           .replaceAll('```', '')
@@ -86,7 +83,6 @@ class FirebaseAIServiceImpl implements AIService {
       return jsonDecode(cleanJson) as Map<String, dynamic>;
     } catch (e) {
       debugPrint("Error analizando imagen: $e");
-      // Retornar mapa vacío o lanzar error según prefieras
       throw Exception("Fallo al analizar la imagen: $e");
     }
   }

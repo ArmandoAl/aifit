@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/stylist_repository.dart';
 import '../../domain/chat_models.dart';
+import '../../../outfit/domain/outfit_models.dart' as pipeline;
+import '../../../outfit/domain/try_on_status.dart';
 import '../../../outfit/services/outfit_service.dart';
 import 'chat_event.dart';
 import 'chat_state.dart';
@@ -18,6 +20,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatSessionStarted>(_onSessionStarted);
     on<ChatMessageSent>(_onMessageSent);
     on<ChatGenerateOutfitRequested>(_onGenerateOutfit);
+    on<ChatTryOnForOutfitRequested>(_onTryOnForOutfit);
   }
 
   void _onSessionStarted(ChatSessionStarted event, Emitter<ChatState> emit) {
@@ -42,8 +45,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     final userMsg = ChatMessage.userText(event.text.trim());
     var messages = [...current.messages, userMsg];
-
-    // Quitar CTA anterior si el usuario sigue conversando
     messages = _withoutStaleCta(messages);
 
     emit(
@@ -123,17 +124,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     try {
       _updateLoadingPhase(emit, 'filtering');
-      await Future.delayed(const Duration(milliseconds: 80));
+      await Future<void>.delayed(const Duration(milliseconds: 80));
       _updateLoadingPhase(emit, 'generating');
-      await Future.delayed(const Duration(milliseconds: 80));
 
-      if (event.generateTryOn) {
-        _updateLoadingPhase(emit, 'creating_image');
-      }
-
-      final result = await _outfitService.generateCompleteOutfit(
+      final result = await _outfitService.generateOutfitSuggestions(
         userPrompt: prompt,
-        generateImage: event.generateTryOn,
       );
 
       final loaded = state as ChatLoaded;
@@ -146,36 +141,50 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             "I couldn't build a full look with your current wardrobe. Try adjusting colors or occasion.",
           ),
         ];
-      } else {
+        emit(loaded.copyWith(messages: resultMessages, isGenerating: false));
+        return;
+      }
+
+      resultMessages = [
+        ...resultMessages,
+        ChatMessage.assistantText(
+          'Here are your curated looks — tap a card for details.',
+        ),
+      ];
+
+      for (var i = 0; i < result.outfits.length; i++) {
+        final outfit = result.outfits[i];
+        TryOnStatus status = TryOnStatus.none;
+        if (event.generateTryOn) {
+          status = i == 0 ? TryOnStatus.generating : TryOnStatus.readyForTryOn;
+        }
         resultMessages = [
           ...resultMessages,
-          ChatMessage.assistantText(
-            "Here are your curated looks — tap any card to see details.",
+          ChatMessage.outfit(
+            ChatOutfitPreview(
+              outfit: outfit,
+              explanation: outfit.explanation,
+              tryOnStatus: status,
+            ),
           ),
         ];
-
-        for (final outfit in result.outfits) {
-          final tryOnUrl =
-              result.tryOnImageUrls[outfit.id] ?? result.tryOnImageUrl;
-          resultMessages = [
-            ...resultMessages,
-            ChatMessage.outfit(
-              ChatOutfitPreview(
-                outfit: outfit,
-                tryOnImageUrl: tryOnUrl,
-                explanation: outfit.explanation,
-              ),
-            ),
-          ];
-        }
       }
 
       emit(
         loaded.copyWith(
           messages: resultMessages,
           isGenerating: false,
+          lastOutfitIntent: result.intent,
         ),
       );
+
+      if (event.generateTryOn && result.outfits.isNotEmpty) {
+        await _generateTryOnAndUpdateMessage(
+          outfitId: result.outfits.first.id,
+          intent: result.intent,
+          emit: emit,
+        );
+      }
     } catch (e) {
       debugPrint('❌ Outfit generation from chat: $e');
       final loaded = state as ChatLoaded;
@@ -191,6 +200,103 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         ),
       );
     }
+  }
+
+  Future<void> _onTryOnForOutfit(
+    ChatTryOnForOutfitRequested event,
+    Emitter<ChatState> emit,
+  ) async {
+    final current = state;
+    if (current is! ChatLoaded || current.lastOutfitIntent == null) return;
+
+    _setOutfitTryOnStatus(emit, event.outfitId, TryOnStatus.generating);
+
+    try {
+      final outfit = _findOutfitInMessages(current.messages, event.outfitId);
+      if (outfit == null) return;
+
+      final url = await _outfitService.generateTryOnForOutfit(
+        outfit: outfit,
+        intent: current.lastOutfitIntent!,
+      );
+
+      _setOutfitTryOnStatus(
+        emit,
+        event.outfitId,
+        url != null && url.isNotEmpty ? TryOnStatus.ready : TryOnStatus.failed,
+        tryOnImageUrl: url,
+      );
+    } catch (e) {
+      debugPrint('❌ Chat try-on error: $e');
+      _setOutfitTryOnStatus(emit, event.outfitId, TryOnStatus.readyForTryOn);
+    }
+  }
+
+  Future<void> _generateTryOnAndUpdateMessage({
+    required String outfitId,
+    required pipeline.OutfitIntent intent,
+    required Emitter<ChatState> emit,
+  }) async {
+    final current = state;
+    if (current is! ChatLoaded) return;
+
+    final outfit = _findOutfitInMessages(current.messages, outfitId);
+    if (outfit == null) return;
+
+    try {
+      final url = await _outfitService.generateTryOnForOutfit(
+        outfit: outfit,
+        intent: intent,
+      );
+
+      _setOutfitTryOnStatus(
+        emit,
+        outfitId,
+        url != null && url.isNotEmpty ? TryOnStatus.ready : TryOnStatus.failed,
+        tryOnImageUrl: url,
+      );
+    } catch (e) {
+      debugPrint('❌ First try-on from chat: $e');
+      _setOutfitTryOnStatus(emit, outfitId, TryOnStatus.readyForTryOn);
+    }
+  }
+
+  pipeline.GeneratedOutfit? _findOutfitInMessages(
+    List<ChatMessage> messages,
+    String outfitId,
+  ) {
+    for (final m in messages) {
+      if (m.type == ChatMessageType.outfitPreview &&
+          m.outfitPreview?.outfit.id == outfitId) {
+        return m.outfitPreview!.outfit;
+      }
+    }
+    return null;
+  }
+
+  void _setOutfitTryOnStatus(
+    Emitter<ChatState> emit,
+    String outfitId,
+    TryOnStatus status, {
+    String? tryOnImageUrl,
+  }) {
+    final current = state;
+    if (current is! ChatLoaded) return;
+
+    final updated = current.messages.map((m) {
+      if (m.type != ChatMessageType.outfitPreview ||
+          m.outfitPreview?.outfit.id != outfitId) {
+        return m;
+      }
+      return ChatMessage.outfit(
+        m.outfitPreview!.copyWith(
+          tryOnStatus: status,
+          tryOnImageUrl: tryOnImageUrl ?? m.outfitPreview!.tryOnImageUrl,
+        ),
+      );
+    }).toList();
+
+    emit(current.copyWith(messages: updated));
   }
 
   void _updateLoadingPhase(Emitter<ChatState> emit, String phase) {

@@ -217,6 +217,7 @@ class _StylistPageState extends State<StylistPage> {
       _ChatOutfitCarouselEntry(:final previews) => StylistOutfitCarousel(
           previews: previews,
           onPreviewTap: (p) => _showOutfitSheet(context, p),
+          onTryOnRequest: (p) => _requestTryOn(context, p),
         ),
       _ChatMessageEntry(:final message) => _buildMessage(context, message, state),
     };
@@ -251,6 +252,12 @@ class _StylistPageState extends State<StylistPage> {
     }
   }
 
+  void _requestTryOn(BuildContext context, ChatOutfitPreview preview) {
+    context.read<ChatBloc>().add(
+          ChatTryOnForOutfitRequested(preview.outfit.id),
+        );
+  }
+
   void _showOutfitSheet(BuildContext context, ChatOutfitPreview preview) {
     AppBottomSheet.showDraggable(
       context: context,
@@ -263,18 +270,8 @@ class _StylistPageState extends State<StylistPage> {
           StylistOutfitPreviewCard(
             preview: preview,
             compact: false,
+            onTryOnRequest: () => _requestTryOn(context, preview),
           ),
-          if (preview.explanation.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                preview.explanation,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.5,
-                      color: AppColors.secondary,
-                    ),
-              ),
-            ),
         ],
       ),
     );

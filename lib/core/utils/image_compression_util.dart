@@ -1,20 +1,18 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import '../platform/app_image.dart';
+
 /// Payload tier for images sent to AI models.
 enum AiImagePayload {
-  /// Wardrobe / outfit garment references — smaller payload.
   garment,
-
-  /// Identity collage, base image, face/body — preserve detail.
   identity,
-
-  /// No re-encoding (rare fallback).
   raw,
 }
 
-/// Local preprocessing before [InlineDataPart] — garment vs identity tiers.
+/// Preprocesado local antes de enviar a modelos de IA.
 class ImageCompressionUtil {
   ImageCompressionUtil._();
 
@@ -24,12 +22,12 @@ class ImageCompressionUtil {
   static const int identityMinWidth = 1024;
   static const int identityJpegQuality = 93;
 
-  static Future<Uint8List> compressGarment(File file) async {
-    return compress(file, payload: AiImagePayload.garment);
+  static Future<Uint8List> compressGarment(AppImage image) {
+    return compressBytes(image.bytes, payload: AiImagePayload.garment);
   }
 
-  static Future<Uint8List> compressIdentity(File file) async {
-    return compress(file, payload: AiImagePayload.identity);
+  static Future<Uint8List> compressIdentity(AppImage image) {
+    return compressBytes(image.bytes, payload: AiImagePayload.identity);
   }
 
   static Future<Uint8List> compressIdentityBytes(Uint8List bytes) async {
@@ -40,14 +38,11 @@ class ImageCompressionUtil {
     );
   }
 
-  static Future<Uint8List> compress(
-    File file, {
+  static Future<Uint8List> compressBytes(
+    Uint8List bytes, {
     AiImagePayload payload = AiImagePayload.garment,
   }) async {
-    if (payload == AiImagePayload.raw) {
-      return file.readAsBytes();
-    }
-    final bytes = await file.readAsBytes();
+    if (payload == AiImagePayload.raw) return bytes;
     return compute(
       _encodeInIsolate,
       _EncodeParams(bytes: bytes, payload: payload),
@@ -62,7 +57,6 @@ class _EncodeParams {
   const _EncodeParams({required this.bytes, required this.payload});
 }
 
-/// Top-level for [compute] — decode, resize, JPEG encode.
 Uint8List _encodeInIsolate(_EncodeParams params) {
   try {
     final image = img.decodeImage(params.bytes);

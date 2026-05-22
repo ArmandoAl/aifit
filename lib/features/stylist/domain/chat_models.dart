@@ -1,4 +1,5 @@
 import '../../outfit/domain/outfit_models.dart' as pipeline;
+import '../../outfit/domain/try_on_status.dart';
 
 enum ChatRole { user, ai }
 
@@ -16,12 +17,28 @@ class ChatOutfitPreview {
   final pipeline.GeneratedOutfit outfit;
   final String? tryOnImageUrl;
   final String explanation;
+  final TryOnStatus tryOnStatus;
 
   const ChatOutfitPreview({
     required this.outfit,
     this.tryOnImageUrl,
     this.explanation = '',
+    this.tryOnStatus = TryOnStatus.none,
   });
+
+  ChatOutfitPreview copyWith({
+    pipeline.GeneratedOutfit? outfit,
+    String? tryOnImageUrl,
+    String? explanation,
+    TryOnStatus? tryOnStatus,
+  }) {
+    return ChatOutfitPreview(
+      outfit: outfit ?? this.outfit,
+      tryOnImageUrl: tryOnImageUrl ?? this.tryOnImageUrl,
+      explanation: explanation ?? this.explanation,
+      tryOnStatus: tryOnStatus ?? this.tryOnStatus,
+    );
+  }
 }
 
 class ChatMessage {
