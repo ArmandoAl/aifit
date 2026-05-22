@@ -1,1 +1,87 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"aifit-a7f6b","appId":"1:268248668862:android:4fb9ca0c4627a45a835cef","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"aifit-a7f6b","appId":"1:268248668862:ios:f0db0f429ce41a2e835cef","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"aifit-a7f6b","appId":"1:268248668862:ios:f0db0f429ce41a2e835cef","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"aifit-a7f6b","configurations":{"android":"1:268248668862:android:4fb9ca0c4627a45a835cef","ios":"1:268248668862:ios:f0db0f429ce41a2e835cef","macos":"1:268248668862:ios:f0db0f429ce41a2e835cef","web":"1:268248668862:web:7f0344c1ee7f0fdb835cef"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "aifit-a7f6b",
+          "appId": "1:268248668862:android:4fb9ca0c4627a45a835cef",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "aifit-a7f6b",
+          "appId": "1:268248668862:ios:f0db0f429ce41a2e835cef",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "aifit-a7f6b",
+          "appId": "1:268248668862:ios:f0db0f429ce41a2e835cef",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "aifit-a7f6b",
+          "configurations": {
+            "android": "1:268248668862:android:4fb9ca0c4627a45a835cef",
+            "ios": "1:268248668862:ios:f0db0f429ce41a2e835cef",
+            "macos": "1:268248668862:ios:f0db0f429ce41a2e835cef",
+            "web": "1:268248668862:web:7f0344c1ee7f0fdb835cef"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(wasm|js)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin"
+          },
+          {
+            "key": "Cross-Origin-Embedder-Policy",
+            "value": "credentialless"
+          }
+        ]
+      }
+    ]
+  }
+}
