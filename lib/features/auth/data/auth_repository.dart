@@ -12,11 +12,8 @@ class AuthRepository {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   Future<void>? _googleInit;
 
-  // Web Client ID (serverClientId) - Required for Android
-  // This is the OAuth 2.0 Web Client ID from Firebase Console
-  // You can find it in: Firebase Console → Project Settings → Your apps → Android app → OAuth 2.0 Client IDs
-  // Look for the one with type "Web application"
-  static const String _webClientId = '268248668862-f1fp960traqm1i0t6ir8sms4qt23339d.apps.googleusercontent.com';
+  static const String _webClientId =
+      '268248668862-f1fp960traqm1i0t6ir8sms4qt23339d.apps.googleusercontent.com';
 
   Future<void> _ensureGoogleInitialized() {
     return _googleInit ??= _googleSignIn.initialize(
@@ -38,14 +35,83 @@ class AuthRepository {
     );
   }
 
-  // Stream para escuchar cambios de sesión (FirebaseAuth)
   Stream<app_model.User?> get authStateChanges =>
       _auth.authStateChanges().map((u) => u == null ? null : _toAppUser(u));
 
-  // Verificar si hay usuario actual
   app_model.User? get currentUser {
     final u = _auth.currentUser;
     return u == null ? null : _toAppUser(u);
+  }
+
+  /// URL de retorno tras [signInWithRedirect] (query o hash con apiKey/mode).
+  bool isWebAuthRedirectReturn(Uri uri) {
+    if (!kIsWeb) return false;
+    if (uri.path.contains('__/auth')) return true;
+    if (uri.queryParameters.containsKey('apiKey')) return true;
+    if (uri.queryParameters.containsKey('mode')) return true;
+    return uri.fragment.contains('apiKey=') || uri.fragment.contains('mode=');
+  }
+
+  /// Debe llamarse una sola vez en [main], antes de [runApp].
+  Future<app_model.User?> bootstrapWebSession() async {
+    if (!kIsWeb) return null;
+
+    try {
+      await _auth.setPersistence(fb_auth.Persistence.LOCAL);
+    } catch (e) {
+      debugPrint('⚠️ setPersistence: $e');
+    }
+
+    final likelyReturn = isWebAuthRedirectReturn(Uri.base);
+
+    try {
+      final result = await _auth.getRedirectResult();
+      final user = result.user;
+      if (user != null) {
+        debugPrint('✅ bootstrap getRedirectResult: ${user.email}');
+        await _syncFirebaseUserToFirestore(user);
+        return _toAppUser(user);
+      }
+      final credential = result.credential;
+      if (credential != null && _auth.currentUser == null) {
+        final cred = await _auth.signInWithCredential(credential);
+        final signedIn = cred.user;
+        if (signedIn != null) {
+          debugPrint('✅ bootstrap signInWithCredential: ${signedIn.email}');
+          await _syncFirebaseUserToFirestore(signedIn);
+          return _toAppUser(signedIn);
+        }
+      }
+      debugPrint(
+        'ℹ️ bootstrap getRedirectResult: sin sesión (likelyReturn=$likelyReturn)',
+      );
+    } catch (e, st) {
+      debugPrint('❌ bootstrap getRedirectResult: $e\n$st');
+    }
+
+    final existing = _auth.currentUser;
+    if (existing != null) {
+      debugPrint('✅ bootstrap currentUser: ${existing.email}');
+      return _toAppUser(existing);
+    }
+
+    if (likelyReturn) {
+      try {
+        final user = await _auth
+            .authStateChanges()
+            .where((u) => u != null)
+            .map((u) => u!)
+            .first
+            .timeout(const Duration(seconds: 8));
+        debugPrint('✅ bootstrap authStateChanges: ${user.email}');
+        await _syncFirebaseUserToFirestore(user);
+        return _toAppUser(user);
+      } catch (e) {
+        debugPrint('⚠️ bootstrap espera authStateChanges: $e');
+      }
+    }
+
+    return null;
   }
 
   Future<app_model.User?> signInWithGoogle() async {
@@ -54,9 +120,11 @@ class AuthRepository {
       debugPrint('   kIsWeb: $kIsWeb');
       debugPrint('   Platform: ${defaultTargetPlatform.name}');
 
-      final fb_auth.User firebaseUser = kIsWeb
-          ? await _signInWithGoogleWeb()
-          : await _signInWithGoogleNative();
+      if (kIsWeb) {
+        return _signInWithGoogleWebPopup();
+      }
+
+      final firebaseUser = await _signInWithGoogleNative();
 
       try {
         await _syncFirebaseUserToFirestore(firebaseUser);
@@ -87,21 +155,27 @@ class AuthRepository {
     }
   }
 
-  /// Web: GIS no soporta [GoogleSignIn.authenticate]; usar popup de Firebase Auth.
-  Future<fb_auth.User> _signInWithGoogleWeb() async {
+  /// Popup en web (COOP/COEP ya no bloquean el opener en hosting).
+  Future<app_model.User?> _signInWithGoogleWebPopup() async {
     debugPrint('🌐 Using Firebase signInWithPopup (web)');
     final provider = fb_auth.GoogleAuthProvider();
     provider.setCustomParameters({'prompt': 'select_account'});
-
     final userCredential = await _auth.signInWithPopup(provider);
     final user = userCredential.user;
     if (user == null) {
-      throw Exception('FirebaseAuth returned null user');
+      throw Exception('Google Sign-In: Firebase devolvió usuario nulo');
     }
-    return user;
+
+    try {
+      await _syncFirebaseUserToFirestore(user);
+    } catch (e) {
+      debugPrint('⚠️ Firestore sync failed (non-critical): $e');
+    }
+
+    _logAuthenticatedUser(user);
+    return _toAppUser(user);
   }
 
-  /// iOS / Android / desktop: flujo nativo con google_sign_in 7.x.
   Future<fb_auth.User> _signInWithGoogleNative() async {
     await _ensureGoogleInitialized();
     debugPrint('✅ Google Sign-In initialized (native)');
@@ -131,7 +205,6 @@ class AuthRepository {
     debugPrint('✅ USUARIO AUTENTICADO CON GOOGLE');
     debugPrint('   UID: ${firebaseUser.uid}');
     debugPrint('   Email: ${firebaseUser.email ?? 'N/A'}');
-    debugPrint('   Nombre: ${firebaseUser.displayName ?? 'N/A'}');
     debugPrint('═══════════════════════════════════════════════════');
   }
 
@@ -141,7 +214,6 @@ class AuthRepository {
 
     final doc = await userRef.get();
     if (!doc.exists) {
-      // First time: create full profile scaffold
       await userRef.set({
         'displayName': user.displayName ?? '',
         'email': user.email ?? '',
@@ -156,7 +228,6 @@ class AuthRepository {
       return;
     }
 
-    // Existing user: do NOT reset preferences/photos/onboarding fields
     await userRef.set({
       'displayName': user.displayName ?? '',
       'email': user.email ?? '',
@@ -175,7 +246,7 @@ class AuthRepository {
       await _ensureGoogleInitialized();
       await _googleSignIn.disconnect();
     } catch (_) {
-      // No-op: disconnect may fail if not signed in.
+      // No-op
     }
   }
 }

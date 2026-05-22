@@ -51,8 +51,15 @@ GoRouter createRouter(BuildContext context) {
       final authState = authBloc.state;
       final currentLocation = state.matchedLocation;
 
+      // Solo el arranque inicial usa splash; login en curso no debe sacar al usuario.
       if (authState is AuthLoading) {
-        if (currentLocation != '/splash') return '/splash';
+        if (currentLocation == '/login' || currentLocation == '/splash') {
+          return null;
+        }
+        return '/splash';
+      }
+
+      if (authState is AuthSigningIn) {
         return null;
       }
 

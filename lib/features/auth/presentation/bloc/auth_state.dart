@@ -8,12 +8,14 @@ abstract class AuthState extends Equatable {
   List<Object?> get props => [];
 }
 
-class AuthInitial extends AuthState {
-  const AuthInitial();
-}
-
+/// Arranque inicial (splash / comprobar sesión).
 class AuthLoading extends AuthState {
   const AuthLoading();
+}
+
+/// Usuario pulsó login; no redirigir a splash.
+class AuthSigningIn extends AuthState {
+  const AuthSigningIn();
 }
 
 class AuthAuthenticated extends AuthState {

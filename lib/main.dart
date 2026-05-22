@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
+import 'core/bootstrap/web_auth_bootstrap.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_router.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,22 +18,29 @@ import 'features/outfit/presentation/bloc/saved_outfits_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
-  // Inicializar Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const AIFitApp());
+  final authRepository = AuthRepository();
+  if (kIsWeb) {
+    await WebAuthBootstrap.initialize(authRepository);
+  }
+
+  runApp(AIFitApp(authRepository: authRepository));
 }
 
 class AIFitApp extends StatelessWidget {
-  const AIFitApp({super.key});
+  const AIFitApp({super.key, required this.authRepository});
+
+  final AuthRepository authRepository;
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => AuthBloc(authRepository: AuthRepository()),
+          create: (context) => AuthBloc(authRepository: authRepository),
         ),
         BlocProvider(
           create: (context) => WardrobeBloc(

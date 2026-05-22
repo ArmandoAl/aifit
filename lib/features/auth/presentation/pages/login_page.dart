@@ -101,7 +101,8 @@ class LoginPage extends StatelessWidget {
                   // Botón de Google Sign-In
                   BlocBuilder<AuthBloc, AuthState>(
                     builder: (context, state) {
-                      final isLoading = state is AuthLoading;
+                      final isLoading =
+                          state is AuthLoading || state is AuthSigningIn;
 
                       return ElevatedButton.icon(
                         onPressed: isLoading
