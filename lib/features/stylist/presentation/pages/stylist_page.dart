@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
+import '../../../../core/utils/keyboard_utils.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
+import '../../../../core/widgets/shell_bottom_insets.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/chat_event.dart';
 import '../bloc/chat_state.dart';
@@ -64,6 +66,7 @@ class _StylistPageState extends State<StylistPage> {
 
   @override
   void dispose() {
+    hideKeyboard();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -173,7 +176,10 @@ class _StylistPageState extends State<StylistPage> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.only(top: 12, bottom: 12),
+              padding: EdgeInsets.only(
+                top: 12,
+                bottom: ShellBottomInsets.scrollPadding(context),
+              ),
               itemCount: itemCount,
               itemBuilder: (context, index) {
                 if (state.isTyping && index == entries.length) {

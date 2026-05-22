@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/main_layout.dart';
+import '../widgets/shell_tab_transition.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/stylist/domain/chat_models.dart';
@@ -114,7 +115,10 @@ GoRouter createRouter(BuildContext context) {
             routes: [
               GoRoute(
                 path: '/wardrobe',
-                builder: (context, state) => const WardrobePage(),
+                pageBuilder: (context, state) => shellTabTransitionPage(
+                  key: state.pageKey,
+                  child: const WardrobePage(),
+                ),
               ),
             ],
           ),
@@ -123,7 +127,10 @@ GoRouter createRouter(BuildContext context) {
             routes: [
               GoRoute(
                 path: '/stylist',
-                builder: (context, state) => const StylistPage(),
+                pageBuilder: (context, state) => shellTabTransitionPage(
+                  key: state.pageKey,
+                  child: const StylistPage(),
+                ),
               ),
             ],
           ),
@@ -132,7 +139,10 @@ GoRouter createRouter(BuildContext context) {
             routes: [
               GoRoute(
                 path: '/profile',
-                builder: (context, state) => const ProfilePage(),
+                pageBuilder: (context, state) => shellTabTransitionPage(
+                  key: state.pageKey,
+                  child: const ProfilePage(),
+                ),
               ),
             ],
           ),

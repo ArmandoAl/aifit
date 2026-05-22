@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/keyboard_utils.dart';
+import '../../../../core/widgets/shell_bottom_insets.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -529,6 +531,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
+    hideKeyboard();
     super.dispose();
   }
 
@@ -580,7 +583,12 @@ class _ProfilePageState extends State<ProfilePage> {
           final user = authState.user;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              24,
+              24,
+              24 + ShellBottomInsets.scrollPadding(context),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -983,6 +991,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
+                SizedBox(height: ShellBottomInsets.scrollExtra),
               ],
             ),
           );

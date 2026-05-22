@@ -6,6 +6,7 @@ import 'dart:io';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/luxury_bottom_sheet.dart';
+import '../../../../core/widgets/shell_bottom_insets.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
@@ -180,7 +181,7 @@ class WardrobePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Expanded(child: _buildGridContent(state)),
+              Expanded(child: _buildGridContent(context, state)),
             ],
           ),
           floatingActionButton: FloatingActionButton(
@@ -189,12 +190,14 @@ class WardrobePage extends StatelessWidget {
             tooltip: 'Generate outfit with AI',
             child: const Icon(Icons.auto_awesome),
           ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.endFloat,
         );
       },
     );
   }
 
-  Widget _buildGridContent(WardrobeState state) {
+  Widget _buildGridContent(BuildContext context, WardrobeState state) {
     if (state is WardrobeLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -206,7 +209,12 @@ class WardrobePage extends StatelessWidget {
         return const Center(child: Text('No items found'));
       }
       return GridView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          ShellBottomInsets.withFab(context),
+        ),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.68,

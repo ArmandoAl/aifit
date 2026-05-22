@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/keyboard_utils.dart';
 
 class QuickGeneratorPage extends StatefulWidget {
   const QuickGeneratorPage({super.key});
@@ -102,6 +103,7 @@ class _QuickGeneratorPageState extends State<QuickGeneratorPage> {
 
   @override
   void dispose() {
+    hideKeyboard();
     _promptController.dispose();
     super.dispose();
   }
@@ -116,7 +118,10 @@ class _QuickGeneratorPageState extends State<QuickGeneratorPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            hideKeyboard();
+            Navigator.pop(context);
+          },
         ),
       ),
       body: SingleChildScrollView(
