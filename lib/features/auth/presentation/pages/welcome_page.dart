@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/services/onboarding_gate_service.dart';
 import '../../../../core/services/onboarding_prefs.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -21,38 +22,36 @@ class _WelcomePageState extends State<WelcomePage> {
   final List<OnboardingStep> _steps = [
     OnboardingStep(
       icon: Icons.camera_alt_rounded,
-      title: 'Upload Your Photos',
+      title: 'Sube tus fotos',
       description:
-          'Take clear, full-body photos in good lighting. The more photos you upload, the better AI results you\'ll get!',
+          'Toma fotos claras de cuerpo completo con buena luz. Cuantas más subas, mejores resultados dará la IA.',
       examples: [
-        'Full body front view',
-        'Side profile',
-        'Face close-up',
-        'Different poses',
+        'Cuerpo completo de frente',
+        'Perfil lateral',
+        'Primer plano del rostro',
+        'Distintas poses',
       ],
     ),
     OnboardingStep(
       icon: Icons.checkroom_rounded,
-      title: 'Build Your Wardrobe',
-      description:
-          'Scan your clothes and let AI analyze them. Take photos of individual items on a clean background.',
+      title: AppStringsEs.buildWardrobe,
+      description: AppStringsEs.buildWardrobeDesc,
       examples: [
-        'Lay clothes flat',
-        'Good lighting',
-        'Clear background',
-        'One item per photo',
+        'Prenda extendida',
+        'Buena iluminación',
+        'Fondo limpio',
+        'Una prenda por foto',
       ],
     ),
     OnboardingStep(
       icon: Icons.auto_awesome,
-      title: 'Get AI Recommendations',
-      description:
-          'Chat with your AI stylist and get personalized outfit suggestions based on your wardrobe and style.',
+      title: AppStringsEs.getRecommendations,
+      description: AppStringsEs.getRecommendationsDesc,
       examples: [
-        'Ask for outfit ideas',
-        'Match by occasion',
-        'Color coordination',
-        'Virtual try-on',
+        'Pide ideas de outfit',
+        'Por ocasión',
+        'Coordinación de color',
+        'Try-on virtual',
       ],
     ),
   ];
@@ -116,7 +115,7 @@ class _WelcomePageState extends State<WelcomePage> {
               child: TextButton(
                 onPressed: _skip,
                 child: const Text(
-                  'Skip',
+                  AppStringsEs.skip,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -213,7 +212,7 @@ class _WelcomePageState extends State<WelcomePage> {
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    'Tips',
+                                    AppStringsEs.tips,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -294,7 +293,9 @@ class _WelcomePageState extends State<WelcomePage> {
                   ),
                 ),
                 child: Text(
-                  _currentPage == _steps.length - 1 ? 'Get Started' : 'Next',
+                  _currentPage == _steps.length - 1
+                      ? AppStringsEs.getStarted
+                      : AppStringsEs.next,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

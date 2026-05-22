@@ -9,15 +9,15 @@ class StylistGenerationLoadingCard extends StatelessWidget {
   String get _label {
     switch (phase) {
       case 'analyzing':
-        return 'Understanding your style intent…';
+        return 'Entendiendo tu estilo…';
       case 'filtering':
-        return 'Searching your wardrobe…';
+        return 'Buscando en tu armario…';
       case 'generating':
-        return 'Composing outfit combinations…';
+        return 'Componiendo combinaciones…';
       case 'creating_image':
-        return 'Creating your virtual try-on…';
+        return 'Creando tu try-on virtual…';
       default:
-        return 'Styling your look…';
+        return 'Estilizando tu look…';
     }
   }
 
@@ -58,7 +58,7 @@ class StylistGenerationLoadingCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Using your wardrobe & style profile',
+                    'Usando tu armario y perfil de estilo',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                         ),

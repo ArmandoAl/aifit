@@ -1,4 +1,5 @@
 import '../../outfit/domain/outfit_semantic_targets.dart';
+import '../../wardrobe/domain/wardrobe_palette.dart';
 
 /// Intent acumulado en sesión de chat (compatible con OutfitIntent / DeepSeek).
 class StylistIntentState {
@@ -34,11 +35,13 @@ class StylistIntentState {
         : null;
 
     return StylistIntentState(
-      occasion: json['occasion']?.toString(),
-      colors: _list(json['colors']),
-      styleTags: _list(json['styleTags']),
-      season: json['season']?.toString(),
-      weather: json['weather']?.toString(),
+      occasion: WardrobePalette.normalizeOccasion(json['occasion']?.toString()),
+      colors: WardrobePalette.normalizeColors(_list(json['colors'])),
+      styleTags: WardrobePalette.normalizeStyleTags(_list(json['styleTags'])),
+      season: json['season'] != null
+          ? WardrobePalette.normalizeSeason(json['season'].toString())
+          : null,
+      weather: WardrobePalette.normalizeWeather(json['weather']?.toString()),
       formality: _double(json['formality']),
       layeringPreference: json['layeringPreference']?.toString(),
       vibe: _list(json['vibe']),

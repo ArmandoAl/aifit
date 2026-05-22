@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_strings_es.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../outfit/domain/try_on_status.dart';
 import '../../domain/chat_models.dart';
@@ -48,12 +49,11 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   hasImage
-                      ? CachedNetworkImage(
+                      ? AppNetworkImage(
                           imageUrl: imageUrl,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => const _ShimmerBox(),
-                          errorWidget: (_, __, ___) =>
-                              const _PlaceholderImage(),
+                          placeholder: const _ShimmerBox(),
+                          errorWidget: const _PlaceholderImage(),
                         )
                       : const _PlaceholderImage(),
                   _TryOnStatusOverlay(
@@ -74,7 +74,7 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            'Curated look',
+                            AppStringsEs.curatedLook,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelLarge
@@ -171,12 +171,11 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     hasImage
-                        ? CachedNetworkImage(
+                        ? AppNetworkImage(
                             imageUrl: imageUrl,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => const _ShimmerBox(),
-                            errorWidget: (_, __, ___) =>
-                                const _PlaceholderImage(),
+                            placeholder: const _ShimmerBox(),
+                            errorWidget: const _PlaceholderImage(),
                           )
                         : const _PlaceholderImage(),
                     _TryOnStatusOverlay(
@@ -195,7 +194,7 @@ class StylistOutfitPreviewCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            'Curated look',
+                            AppStringsEs.curatedLook,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium

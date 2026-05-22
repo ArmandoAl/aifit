@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
+import '../l10n/app_strings_es.dart';
 import '../../../../core/utils/mock_data.dart';
 import '../../../../features/wardrobe/domain/wardrobe_item_model.dart';
 
@@ -25,11 +26,14 @@ class WearingItemsList extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Wearing this look",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Text(
+                AppStringsEs.wearingThisLook,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              TextButton(onPressed: () {}, child: const Text("Edit Items")),
+              TextButton(
+                onPressed: () {},
+                child: Text(AppStringsEs.editItems),
+              ),
             ],
           ),
         ),
@@ -48,20 +52,22 @@ class WearingItemsList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          image: DecorationImage(
-                            image: CachedNetworkImageProvider(item.imageUrl),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: (0.05)),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: AppNetworkImage(
+                            imageUrl: item.imageUrl,
                             fit: BoxFit.cover,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: (0.05)),
-                              blurRadius: 4,
-                            ),
-                          ],
                         ),
                       ),
                     ),

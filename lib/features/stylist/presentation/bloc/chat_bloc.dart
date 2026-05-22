@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../data/stylist_repository.dart';
 import '../../domain/chat_models.dart';
 import '../../../outfit/domain/outfit_models.dart' as pipeline;
@@ -87,9 +88,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         loaded.copyWith(
           messages: [
             ...loaded.messages,
-            ChatMessage.assistantText(
-              "I'm having a brief connection issue — could you try again?",
-            ),
+            ChatMessage.assistantText(AppStringsEs.connectionError),
           ],
           isTyping: false,
         ),
@@ -108,9 +107,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     var messages = _withoutStaleCta(current.messages);
     messages = [
       ...messages,
-      ChatMessage.assistantText(
-        "Perfect — I'm putting together looks from your wardrobe.",
-      ),
+      ChatMessage.assistantText(AppStringsEs.puttingLooksTogether),
       ChatMessage.loading('analyzing'),
     ];
 
@@ -137,9 +134,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       if (result.outfits.isEmpty) {
         resultMessages = [
           ...resultMessages,
-          ChatMessage.error(
-            "I couldn't build a full look with your current wardrobe. Try adjusting colors or occasion.",
-          ),
+          ChatMessage.error(AppStringsEs.couldNotBuildFullLook),
         ];
         emit(loaded.copyWith(messages: resultMessages, isGenerating: false));
         return;
@@ -147,9 +142,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
       resultMessages = [
         ...resultMessages,
-        ChatMessage.assistantText(
-          'Here are your curated looks — tap a card for details.',
-        ),
+        ChatMessage.assistantText(AppStringsEs.hereAreYourLooks),
       ];
 
       for (var i = 0; i < result.outfits.length; i++) {

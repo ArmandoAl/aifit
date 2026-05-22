@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/platform/image_preview.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/platform/app_image.dart';
+import '../../domain/wardrobe_palette.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -82,7 +84,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
       if (_formDataList[i].type == null || _formDataList[i].subType == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please fill all required fields for item ${i + 1}'),
+            content: Text('${AppStringsEs.fillRequiredFields} (${i + 1})'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -108,7 +110,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
     if (authState is! AuthAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please log in to add items'),
+          content: Text(AppStringsEs.pleaseLogin),
           backgroundColor: AppColors.error,
         ),
       );
@@ -136,7 +138,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Items added successfully! 🎉'),
+            content: Text(AppStringsEs.itemsAddedSuccess),
             backgroundColor: AppColors.success,
             duration: Duration(seconds: 2),
           ),
@@ -152,7 +154,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding items: $e'),
+            content: Text('${AppStringsEs.errorAddingItems}: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -177,7 +179,9 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isSingleItem ? 'Add Item' : 'Add Items (${_selectedImages.length})',
+          isSingleItem
+              ? AppStringsEs.addItem
+              : AppStringsEs.addItems(_selectedImages.length),
         ),
         actions: [
           if (_selectedImages.isNotEmpty)
@@ -203,7 +207,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
                       onPressed: _saveItems,
                       icon: const Icon(Icons.check, color: Colors.white),
                       label: const Text(
-                        'Save',
+                        AppStringsEs.save,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -242,14 +246,14 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'No images selected',
+            AppStringsEs.noImagesSelected,
             style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: _pickImages,
             icon: const Icon(Icons.photo_library),
-            label: const Text('Select Images'),
+            label: const Text(AppStringsEs.selectImages),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
@@ -327,7 +331,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
       children: [
         if (!isCompact) ...[
           Text(
-            'Item Details',
+            AppStringsEs.itemDetails,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -340,13 +344,13 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
         DropdownButtonFormField<String>(
           initialValue: formData.type,
           decoration: const InputDecoration(
-            labelText: 'Type *',
+            labelText: AppStringsEs.typeRequired,
             border: OutlineInputBorder(),
           ),
           items: _clothingTypes.map((type) {
             return DropdownMenuItem(
               value: type,
-              child: Text(type[0].toUpperCase() + type.substring(1)),
+              child: Text(WardrobePalette.labelType(type)),
             );
           }).toList(),
           onChanged: (value) {
@@ -361,7 +365,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
         DropdownButtonFormField<String>(
           initialValue: formData.subType,
           decoration: const InputDecoration(
-            labelText: 'Sub-type *',
+            labelText: AppStringsEs.subTypeRequired,
             border: OutlineInputBorder(),
           ),
           items: subTypeOptions.map((subType) {
@@ -382,7 +386,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
         // Brand (optional)
         TextFormField(
           decoration: const InputDecoration(
-            labelText: 'Brand (optional)',
+            labelText: AppStringsEs.brandOptional,
             border: OutlineInputBorder(),
           ),
           initialValue: formData.brand,

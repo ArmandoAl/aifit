@@ -1,3 +1,4 @@
+import '../../../core/l10n/app_strings_es.dart';
 import '../domain/chat_models.dart';
 import '../domain/stylist_intent_state.dart';
 import '../services/stylist_chat_service.dart';
@@ -49,8 +50,7 @@ class StylistRepositoryImpl implements StylistRepository {
   @override
   StylistChatTurn welcomeMessage() {
     return StylistChatTurn(
-      assistantMessage:
-          "Hi — I'm your personal stylist. Tell me the occasion, vibe, or colors you have in mind, and I'll curate looks from your wardrobe.",
+      assistantMessage: AppStringsEs.stylistWelcome,
       intentState: const StylistIntentState(),
       readyToGenerate: false,
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class StylistGenerateCtaCard extends StatelessWidget {
@@ -43,7 +44,7 @@ class StylistGenerateCtaCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Ready to style you',
+                  AppStringsEs.readyToStyleYou,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -72,7 +73,11 @@ class StylistGenerateCtaCard extends StatelessWidget {
                         ),
                       )
                     : const Icon(Icons.checkroom_outlined),
-                label: Text(isLoading ? 'Creating looks…' : 'Generate Outfit'),
+                label: Text(
+                  isLoading
+                      ? AppStringsEs.creatingLooks
+                      : AppStringsEs.generateOutfitCta,
+                ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 14),

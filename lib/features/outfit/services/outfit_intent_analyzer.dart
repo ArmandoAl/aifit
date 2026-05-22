@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/deepseek_service.dart';
+import '../../wardrobe/domain/wardrobe_palette.dart';
 import '../domain/outfit_intent_prompt.dart';
 import '../domain/outfit_models.dart';
 
@@ -94,19 +95,30 @@ class OutfitIntentAnalyzer {
       styleTags.add('casual');
     }
 
-    const colorKeywords = {
-      'azul': 'blue',
-      'blue': 'blue',
-      'blanco': 'white',
-      'white': 'white',
-      'negro': 'black',
-      'black': 'black',
-      'beige': 'beige',
-      'tan': 'beige',
-    };
-    for (final e in colorKeywords.entries) {
-      if (lower.contains(e.key)) preferredColors.add(e.value);
+    for (final color in WardrobePalette.standardColors) {
+      if (lower.contains(color) ||
+          lower.contains(WardrobePalette.labelColor(color).toLowerCase())) {
+        preferredColors.add(color);
+      }
     }
+    for (final entry in {
+      'negro': 'black',
+      'blanco': 'white',
+      'gris': 'gray',
+      'azul': 'blue',
+      'rojo': 'red',
+      'verde': 'green',
+      'beige': 'beige',
+    }.entries) {
+      if (lower.contains(entry.key)) {
+        preferredColors.add(WardrobePalette.normalizeColor(entry.value));
+      }
+    }
+    final normalizedColors =
+        WardrobePalette.normalizeColors(preferredColors.toList());
+    preferredColors
+      ..clear()
+      ..addAll(normalizedColors);
 
     return OutfitIntent(
       reasoning: 'Local fallback (AI unavailable)',

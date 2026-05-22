@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class LoginPage extends StatelessWidget {
@@ -72,7 +73,7 @@ class LoginPage extends StatelessWidget {
 
                   // Subtítulo
                   const Text(
-                    'Your AI Stylist',
+                    AppStringsEs.loginTagline,
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.white70,
@@ -86,7 +87,7 @@ class LoginPage extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
-                      'Create perfect outfits with AI using your real wardrobe',
+                      AppStringsEs.loginDescription,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -131,7 +132,9 @@ class LoginPage extends StatelessWidget {
                                     const Icon(Icons.login, size: 24),
                               ),
                         label: Text(
-                          isLoading ? 'Signing in...' : 'Continue with Google',
+                          isLoading
+                              ? AppStringsEs.signingIn
+                              : AppStringsEs.continueWithGoogle,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -154,7 +157,7 @@ class LoginPage extends StatelessWidget {
 
                   // Disclaimer
                   const Text(
-                    'By continuing, you agree to our Terms of Service\nand Privacy Policy',
+                    AppStringsEs.termsLine,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,

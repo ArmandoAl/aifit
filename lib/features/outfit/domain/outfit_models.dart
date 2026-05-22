@@ -3,6 +3,7 @@ library;
 
 import 'package:aifit/paths.dart';
 import '../../profile/domain/user_identity_profile.dart';
+import '../../wardrobe/domain/wardrobe_palette.dart';
 import 'outfit_semantic_targets.dart';
 
 class OutfitIntent {
@@ -30,17 +31,21 @@ class OutfitIntent {
   }) : semanticTargets = semanticTargets ?? const OutfitSemanticTargets();
 
   factory OutfitIntent.fromJson(Map<String, dynamic> json) {
+    final rawColors = json['preferredColors'] != null
+        ? List<String>.from(json['preferredColors'])
+        : <String>[];
+    final rawTags = json['styleTags'] != null
+        ? List<String>.from(json['styleTags'])
+        : <String>[];
     return OutfitIntent(
       reasoning: json['reasoning']?.toString(),
-      occasion: json['occasion']?.toString(),
-      preferredColors: json['preferredColors'] != null
-          ? List<String>.from(json['preferredColors'])
-          : [],
-      styleTags: json['styleTags'] != null
-          ? List<String>.from(json['styleTags'])
-          : [],
-      season: json['season']?.toString(),
-      weather: json['weather']?.toString(),
+      occasion: WardrobePalette.normalizeOccasion(json['occasion']?.toString()),
+      preferredColors: WardrobePalette.normalizeColors(rawColors),
+      styleTags: WardrobePalette.normalizeStyleTags(rawTags),
+      season: json['season'] != null
+          ? WardrobePalette.normalizeSeason(json['season'].toString())
+          : null,
+      weather: WardrobePalette.normalizeWeather(json['weather']?.toString()),
       constraints: json['constraints'] as Map<String, dynamic>?,
       userPrompt: json['userPrompt']?.toString(),
       semanticTargets: OutfitSemanticTargets.fromJson(

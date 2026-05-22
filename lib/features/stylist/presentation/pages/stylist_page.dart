@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/utils/keyboard_utils.dart';
@@ -124,8 +125,8 @@ class _StylistPageState extends State<StylistPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppPageAppBar(
-        title: 'AI Stylist',
-        subtitle: 'Premium styling session',
+        title: AppStringsEs.aiStylist,
+        subtitle: AppStringsEs.premiumStyling,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -153,7 +154,7 @@ class _StylistPageState extends State<StylistPage> {
                   children: [
                     Icon(Icons.checkroom_outlined, size: 22),
                     SizedBox(width: 12),
-                    Text('Saved outfits'),
+                    Text(AppStringsEs.savedOutfits),
                   ],
                 ),
               ),
@@ -163,7 +164,7 @@ class _StylistPageState extends State<StylistPage> {
                   children: [
                     Icon(Icons.edit_note_outlined, size: 22),
                     SizedBox(width: 12),
-                    Text('Quick generate'),
+                    Text(AppStringsEs.quickGenerate),
                   ],
                 ),
               ),
@@ -261,8 +262,8 @@ class _StylistPageState extends State<StylistPage> {
   void _showOutfitSheet(BuildContext context, ChatOutfitPreview preview) {
     AppBottomSheet.showDraggable(
       context: context,
-      title: 'Look details',
-      subtitle: 'Curated for your wardrobe',
+      title: AppStringsEs.lookDetails,
+      subtitle: 'Seleccionado para tu armario',
       builder: (scrollController) => ListView(
         controller: scrollController,
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
@@ -304,7 +305,7 @@ class _StylistPageState extends State<StylistPage> {
                 minLines: 1,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  hintText: 'Describe the occasion, vibe, or colors…',
+                  hintText: AppStringsEs.describeOccasionHint,
                   filled: true,
                   fillColor: AppColors.background,
                   border: OutlineInputBorder(

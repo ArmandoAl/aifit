@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../api_keys.dart';
+import '../../wardrobe/domain/wardrobe_palette.dart';
 import '../domain/stylist_chat_response.dart';
 import '../domain/stylist_intent_state.dart';
 
@@ -13,7 +14,7 @@ class StylistChatService {
 
   static const _model = 'gpt-4.1-mini';
 
-  static const _systemPrompt = '''
+  static String get _systemPrompt => '''
 You are OutfitAI — a premium personal fashion stylist.
 
 YOUR ROLE:
@@ -52,6 +53,15 @@ RULES:
 - readyToGenerate=true only when occasion is clear AND (colors OR styleTags OR vibe) exist.
 - Keep assistantMessage under 3 short sentences.
 - Be premium, confident, helpful — not salesy.
+
+LANGUAGE (critical):
+- assistantMessage: ALWAYS Spanish (neutral LATAM). Never English in what the user reads.
+- User may write in Spanish or English; understand both.
+- intentState.colors: ONLY English slugs from this list: ${WardrobePalette.colorsForPrompt}
+- intentState.styleTags: ONLY English slugs from: ${WardrobePalette.styleTagsForPrompt}
+- intentState.season: only spring|summer|fall|winter|null (never Spanish season names in JSON).
+- intentState.occasion: use English slugs casual|formal|sport|party|work|date|everyday when possible.
+- Map Spanish user words to English slugs in JSON (e.g. negro→black, deportivo→sporty, primavera→spring).
 ''';
 
   Future<StylistChatResponse> chat({

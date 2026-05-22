@@ -1,4 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/l10n/app_strings_es.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
@@ -82,7 +83,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Item updated successfully!'),
+            content: Text(AppStringsEs.itemUpdated),
             backgroundColor: AppColors.success,
           ),
         );
@@ -98,7 +99,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating item: $e'),
+            content: Text('${AppStringsEs.errorUpdating}: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -116,7 +117,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
     if (_outfitPromptController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter instructions for the outfit'),
+          content: Text(AppStringsEs.enterOutfitInstructions),
           backgroundColor: AppColors.error,
         ),
       );
@@ -140,7 +141,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
 
       if (result.outfits.isEmpty) {
         throw Exception(
-          'Could not build an outfit with your current wardrobe.',
+          AppStringsEs.couldNotBuildOutfit,
         );
       }
 
@@ -164,7 +165,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error generating outfit: $e'),
+            content: Text('${AppStringsEs.errorGeneratingOutfit}: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -293,7 +294,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error analyzing image: $e'),
+            content: Text('${AppStringsEs.errorAnalyzing}: $e'),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 4),
           ),
@@ -312,7 +313,9 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Item' : 'Item Details'),
+        title: Text(
+          _isEditing ? AppStringsEs.editItem : AppStringsEs.itemDetailsTitle,
+        ),
         actions: [
           if (!_isEditing)
             IconButton(
@@ -341,15 +344,14 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image Section
-            Container(
+            SizedBox(
               height: 300,
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                image: DecorationImage(
-                  image: CachedNetworkImageProvider(_currentItem.imageUrl),
-                  fit: BoxFit.cover,
-                ),
+              child: AppNetworkImage(
+                imageUrl: _currentItem.imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 300,
               ),
             ),
 
@@ -398,7 +400,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                               const SizedBox(width: 12),
                               const Expanded(
                                 child: Text(
-                                  'AI Analysis',
+                                  AppStringsEs.aiAnalysis,
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -409,7 +411,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Analyze this item with AI to automatically detect colors, style tags, and season.',
+                            AppStringsEs.aiAnalysisDescription,
                             style: TextStyle(fontSize: 14, color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
@@ -432,8 +434,8 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                                   : const Icon(Icons.auto_awesome),
                               label: Text(
                                 _isAnalyzing
-                                    ? 'Analyzing...'
-                                    : 'Analyze with AI',
+                                    ? AppStringsEs.analyzing
+                                    : AppStringsEs.analyzeWithAi,
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.secondary,
@@ -455,7 +457,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                     TextField(
                       controller: _brandController,
                       decoration: const InputDecoration(
-                        labelText: 'Brand',
+                        labelText: AppStringsEs.brand,
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.label_outline),
                       ),
@@ -471,13 +473,13 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                         _currentItem.brand!.isNotEmpty)
                       _InfoRow(
                         icon: Icons.label_outline,
-                        label: 'Brand',
+                        label: AppStringsEs.brand,
                         value: _currentItem.brand!,
                       ),
                   ],
 
                   // Colors Section
-                  _SectionTitle(title: 'Colors', isEditing: _isEditing),
+                  _SectionTitle(title: AppStringsEs.colors, isEditing: _isEditing),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -486,7 +488,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       ..._paletteColors.map((color) {
                         final isSelected = _currentItem.colors.contains(color);
                         return FilterChip(
-                          label: Text(color),
+                          label: Text(WardrobePalette.labelColor(color)),
                           selected: isSelected,
                           onSelected: _isEditing
                               ? (_) => _toggleColor(color)
@@ -505,7 +507,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       }),
                       ..._extraColors.map((color) {
                         return FilterChip(
-                          label: Text(color),
+                          label: Text(WardrobePalette.labelColor(color)),
                           selected: true,
                           onSelected: _isEditing
                               ? (_) => _toggleColor(color)
@@ -525,7 +527,10 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   const SizedBox(height: 24),
 
                   // Style Tags Section
-                  _SectionTitle(title: 'Style Tags', isEditing: _isEditing),
+                  _SectionTitle(
+                    title: AppStringsEs.styleTags,
+                    isEditing: _isEditing,
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -534,7 +539,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       ..._paletteStyleTags.map((tag) {
                         final isSelected = _currentItem.styleTags.contains(tag);
                         return FilterChip(
-                          label: Text(tag),
+                          label: Text(WardrobePalette.labelStyleTag(tag)),
                           selected: isSelected,
                           onSelected: _isEditing
                               ? (_) => _toggleStyleTag(tag)
@@ -553,7 +558,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       }),
                       ..._extraStyleTags.map((tag) {
                         return FilterChip(
-                          label: Text(tag),
+                          label: Text(WardrobePalette.labelStyleTag(tag)),
                           selected: true,
                           onSelected: _isEditing
                               ? (_) => _toggleStyleTag(tag)
@@ -570,7 +575,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                   const SizedBox(height: 24),
 
                   // Season Section
-                  _SectionTitle(title: 'Season', isEditing: _isEditing),
+                  _SectionTitle(title: AppStringsEs.season, isEditing: _isEditing),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -578,7 +583,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                     children: _paletteSeasons.map((season) {
                       final isSelected = _currentItem.season.contains(season);
                       return FilterChip(
-                        label: Text(season),
+                        label: Text(WardrobePalette.labelSeason(season)),
                         selected: isSelected,
                         onSelected: _isEditing
                             ? (selected) {
@@ -603,7 +608,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                     const Divider(),
                     const SizedBox(height: 16),
                     const Text(
-                      'Generate Outfit with AI',
+                      AppStringsEs.generateOutfitWithAi,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -614,7 +619,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       controller: _outfitPromptController,
                       decoration: InputDecoration(
                         labelText:
-                            'Instructions (e.g., "casual day out", "formal event")',
+                            AppStringsEs.outfitInstructionsHint,
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.auto_awesome),
                         suffixIcon: IconButton(
@@ -640,7 +645,7 @@ class _WardrobeItemDetailPageState extends State<WardrobeItemDetailPage> {
                       child: ElevatedButton.icon(
                         onPressed: _isGeneratingOutfit ? null : _generateOutfit,
                         icon: const Icon(Icons.auto_awesome),
-                        label: const Text('Generate Outfit'),
+                        label: const Text(AppStringsEs.generateOutfit),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,

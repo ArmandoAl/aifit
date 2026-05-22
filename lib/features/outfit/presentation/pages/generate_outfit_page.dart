@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/keyboard_utils.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
 import '../bloc/outfit_generation_bloc.dart';
 import '../bloc/outfit_generation_event.dart';
@@ -35,7 +37,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
     if (prompt.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a description of the outfit you want'),
+          content: Text(AppStringsEs.enterOutfitDescription),
           backgroundColor: AppColors.error,
         ),
       );
@@ -54,12 +56,12 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppSubpageAppBar(
-        title: 'Generate Outfit',
-        subtitle: 'Prompt-based styling',
+        title: AppStringsEs.generateOutfitTitle,
+        subtitle: AppStringsEs.generateOutfitSubtitle,
         actions: [
           IconButton(
             icon: const Icon(Icons.checkroom_outlined),
-            tooltip: 'Saved outfits',
+            tooltip: AppStringsEs.savedOutfits,
             onPressed: () => context.push('/saved-outfits'),
           ),
         ],
@@ -69,7 +71,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
           if (state is OutfitGenerationError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error: ${state.message}'),
+                content: Text(AppStringsEs.errorWith(state.message)),
                 backgroundColor: AppColors.error,
                 duration: const Duration(seconds: 4),
               ),
@@ -96,7 +98,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                 children: [
                   // Header
                   const Text(
-                    'Describe the outfit you want',
+                    AppStringsEs.describeOutfitWant,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -110,7 +112,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                   TextField(
                     controller: _promptController,
                     decoration: InputDecoration(
-                      labelText: 'Outfit description',
+                      labelText: AppStringsEs.outfitDescription,
                       hintText: 'e.g., casual outfit for the weekend',
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.auto_awesome),
@@ -133,10 +135,8 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                   // Generate Image Toggle
                   Card(
                     child: SwitchListTile(
-                      title: const Text('Generate preview image'),
-                      subtitle: const Text(
-                        'Genera la vista del primer look al instante; los demás quedan listos para try-on bajo demanda.',
-                      ),
+                      title: const Text(AppStringsEs.generatePreviewImage),
+                      subtitle: const Text(AppStringsEs.generatePreviewSubtitle),
                       value: _generateImage,
                       onChanged: state is OutfitGenerationLoading
                           ? null
@@ -172,7 +172,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                       label: Text(
                         state is OutfitGenerationLoading
                             ? _getLoadingText(state)
-                            : 'Generate Outfits',
+                            : AppStringsEs.generateOutfitsButton,
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -204,15 +204,15 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
   String _getLoadingText(OutfitGenerationLoading state) {
     switch (state.currentPhase) {
       case 'analyzing':
-        return 'Analyzing your request...';
+        return AppStringsEs.analyzingRequest;
       case 'filtering':
-        return 'Filtering your wardrobe...';
+        return AppStringsEs.filteringWardrobe;
       case 'generating':
-        return 'Generating outfits...';
+        return AppStringsEs.generatingOutfits;
       case 'creating_image':
-        return 'Creating preview image...';
+        return AppStringsEs.creatingPreview;
       default:
-        return 'Processing...';
+        return AppStringsEs.processing;
     }
   }
 
@@ -233,9 +233,9 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Generated Outfits',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          AppStringsEs.generatedOutfits,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         ...state.outfits.asMap().entries.map((entry) {
@@ -441,28 +441,23 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
         imageUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          imageUrl,
+        child: AppNetworkImage(
+          imageUrl: imageUrl,
           width: double.infinity,
           height: 300,
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              height: 300,
-              color: Colors.grey[200],
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              height: 300,
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(Icons.error_outline, size: 48),
-              ),
-            );
-          },
+          placeholder: Container(
+            height: 300,
+            color: Colors.grey[200],
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          errorWidget: Container(
+            height: 300,
+            color: Colors.grey[200],
+            child: const Center(
+              child: Icon(Icons.error_outline, size: 48),
+            ),
+          ),
         ),
       );
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/platform/image_preview.dart';
 import '../../../../core/platform/app_image.dart';
@@ -734,20 +735,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
+                          child: AppNetworkImage(
                             key: ValueKey(_baseImageUrl),
                             imageUrl: _baseImageUrl!,
                             width: double.infinity,
                             height: 300,
                             fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
+                            placeholder: Container(
                               height: 300,
                               color: AppColors.background,
                               child: const Center(
                                 child: CircularProgressIndicator(),
                               ),
                             ),
-                            errorWidget: (context, url, error) => Container(
+                            errorWidget: Container(
                               height: 300,
                               color: AppColors.background,
                               child: const Icon(Icons.error),
@@ -1075,16 +1076,11 @@ class _ProfilePageState extends State<ProfilePage> {
               // Show photo from Firestore (URL)
               return Stack(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      image: DecorationImage(
-                        image: CachedNetworkImageProvider(photoUrls[index]),
-                        fit: BoxFit.cover,
-                        onError: (exception, stackTrace) {
-                          debugPrint('Error loading image: $exception');
-                        },
-                      ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: AppNetworkImage(
+                      imageUrl: photoUrls[index],
+                      fit: BoxFit.cover,
                     ),
                   ),
                   Positioned(

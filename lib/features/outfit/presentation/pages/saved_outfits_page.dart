@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/l10n/app_strings_es.dart';
+import '../../../../core/widgets/app_network_image.dart';
+import '../../../wardrobe/domain/wardrobe_palette.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
@@ -44,7 +46,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppSubpageAppBar(
-        title: 'My Outfits',
+        title: AppStringsEs.myOutfits,
         subtitle: 'Saved try-on history',
         actions: [
           IconButton(
@@ -202,17 +204,17 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
+                  AppNetworkImage(
                       imageUrl: outfit.tryOnImageUrl,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+                      placeholder: Container(
                         color: Colors.grey[200],
                         child: const Center(
                           child: CircularProgressIndicator(),
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
+                      errorWidget: Container(
                         color: AppColors.surfaceContainer,
                         child: const Icon(Icons.error_outline),
                       ),
@@ -305,7 +307,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                         ...outfit.colors.take(2).map(
                               (color) => Chip(
                                 label: Text(
-                                  color,
+                                  WardrobePalette.labelColor(color),
                                   style: const TextStyle(fontSize: 10),
                                 ),
                                 backgroundColor: AppColors.primary.withValues(
@@ -320,7 +322,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                         ...outfit.styleTags.take(1).map(
                               (tag) => Chip(
                                 label: Text(
-                                  tag,
+                                  WardrobePalette.labelStyleTag(tag),
                                   style: const TextStyle(fontSize: 10),
                                 ),
                                 backgroundColor: AppColors.secondary.withValues(
@@ -358,30 +360,33 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                 DropdownButtonFormField<String>(
                   value: _selectedOccasion,
                   decoration: const InputDecoration(
-                    labelText: 'Occasion',
+                    labelText: 'Ocasión',
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All')),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text(AppStringsEs.filterAll),
+                    ),
+                    DropdownMenuItem(
                       value: 'casual',
-                      child: Text('Casual'),
+                      child: Text(WardrobePalette.labelOccasion('casual')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'formal',
-                      child: Text('Formal'),
+                      child: Text(WardrobePalette.labelOccasion('formal')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'sport',
-                      child: Text('Sport'),
+                      child: Text(WardrobePalette.labelOccasion('sport')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'party',
-                      child: Text('Party'),
+                      child: Text(WardrobePalette.labelOccasion('party')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'work',
-                      child: Text('Work'),
+                      child: Text(WardrobePalette.labelOccasion('work')),
                     ),
                   ],
                   onChanged: (value) {
@@ -396,26 +401,29 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
                 DropdownButtonFormField<String>(
                   value: _selectedSeason,
                   decoration: const InputDecoration(
-                    labelText: 'Season',
+                    labelText: AppStringsEs.season,
                     border: OutlineInputBorder(),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All')),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text(AppStringsEs.filterAll),
+                    ),
+                    DropdownMenuItem(
                       value: 'spring',
-                      child: Text('Spring'),
+                      child: Text(WardrobePalette.labelSeason('spring')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'summer',
-                      child: Text('Summer'),
+                      child: Text(WardrobePalette.labelSeason('summer')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'fall',
-                      child: Text('Fall'),
+                      child: Text(WardrobePalette.labelSeason('fall')),
                     ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'winter',
-                      child: Text('Winter'),
+                      child: Text(WardrobePalette.labelSeason('winter')),
                     ),
                   ],
                   onChanged: (value) {
@@ -497,7 +505,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
           ),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            child: CachedNetworkImage(
+            child: AppNetworkImage(
               imageUrl: outfit.tryOnImageUrl,
               width: double.infinity,
               height: 400,
@@ -507,7 +515,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
           const SizedBox(height: 24),
           if (outfit.outfit.explanation.isNotEmpty) ...[
             Text(
-              'Why this works',
+              AppStringsEs.whyThisWorks,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -523,7 +531,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
             const SizedBox(height: 24),
           ],
           Text(
-            'Tags',
+            AppStringsEs.tags,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -534,9 +542,17 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
             runSpacing: 8,
             children: [
               if (outfit.occasion != null)
-                Chip(label: Text(outfit.occasion!)),
-              ...outfit.colors.map((c) => Chip(label: Text(c))),
-              ...outfit.styleTags.map((t) => Chip(label: Text(t))),
+                Chip(
+                  label: Text(
+                    WardrobePalette.labelOccasion(outfit.occasion!),
+                  ),
+                ),
+              ...outfit.colors.map(
+                (c) => Chip(label: Text(WardrobePalette.labelColor(c))),
+              ),
+              ...outfit.styleTags.map(
+                (t) => Chip(label: Text(WardrobePalette.labelStyleTag(t))),
+              ),
             ],
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/l10n/app_strings_es.dart';
 import '../../core/utils/keyboard_utils.dart';
 import 'luxury_bottom_nav_bar.dart';
 
@@ -13,17 +14,17 @@ class MainLayout extends StatelessWidget {
     LuxuryNavDestination(
       icon: Icons.checkroom_outlined,
       selectedIcon: Icons.checkroom_rounded,
-      label: 'Wardrobe',
+      label: AppStringsEs.navWardrobe,
     ),
     LuxuryNavDestination(
       icon: Icons.auto_awesome_outlined,
       selectedIcon: Icons.auto_awesome,
-      label: 'Stylist',
+      label: AppStringsEs.navStylist,
     ),
     LuxuryNavDestination(
       icon: Icons.person_outline_rounded,
       selectedIcon: Icons.person_rounded,
-      label: 'Profile',
+      label: AppStringsEs.navProfile,
     ),
   ];
 

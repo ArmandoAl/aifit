@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../stylist/domain/chat_models.dart';
@@ -46,21 +46,21 @@ class OutfitResultPage extends StatelessWidget {
         child: Column(
           children: [
             // 1. La Imagen Gigante (Virtual Try-On Result)
-            Container(
-              height: MediaQuery.of(context).size.height * 0.65,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: CachedNetworkImageProvider(outfit.imageUrl),
-                  fit: BoxFit.cover,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
               ),
-              child: Stack(
-                children: [
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.65,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AppNetworkImage(
+                      imageUrl: outfit.imageUrl,
+                      fit: BoxFit.cover,
+                    ),
                   // Etiqueta flotante de Match
                   Positioned(
                     bottom: 24,
@@ -105,7 +105,8 @@ class OutfitResultPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
 

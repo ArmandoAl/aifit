@@ -68,7 +68,9 @@ $fullExampleJson
 - Output ONLY the JSON object.
 - semanticTargets helps match wardrobe AI metadata (occasion_vectors, style_scores, climate_compatibility).
 - Map user intent to occasionSlugs and climateKeys when implied.
-- preferredColors: use standard names (black, white, gray, navy, blue, red, green, brown, beige, pink, yellow, orange, purple).
+- preferredColors: use standard ENGLISH names only (black, white, gray, navy, blue, red, green, brown, beige, pink, yellow, orange, purple) — even if the user wrote in Spanish (e.g. negro→black, azul→blue).
+- styleTags and occasion: use English slugs (casual, formal, sporty, etc.).
+- The user request may be in Spanish; interpret it correctly but keep all JSON enum/slug values in English.
 
 ### USER REQUEST
 "$userRequest"

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../../features/stylist/domain/chat_models.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../l10n/app_strings_es.dart';
+import 'app_network_image.dart';
 
 class OutfitRecommendationCard extends StatelessWidget {
   final GeneratedOutfit outfit;
@@ -33,17 +34,15 @@ class OutfitRecommendationCard extends StatelessWidget {
                 ),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: CachedNetworkImage(
+                  child: AppNetworkImage(
                     imageUrl: outfit.imageUrl,
                     fit: BoxFit.cover,
-                    errorWidget: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported, size: 48),
-                        ),
-                      );
-                    },
+                    errorWidget: Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported, size: 48),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -57,7 +56,7 @@ class OutfitRecommendationCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Generated Outfit',
+                          AppStringsEs.generatedOutfit,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -106,7 +105,7 @@ class OutfitRecommendationCard extends StatelessWidget {
                           context.push('/outfit-result', extra: outfit);
                         },
                         icon: const Icon(Icons.visibility_outlined, size: 18),
-                        label: const Text('View Details'),
+                        label: const Text(AppStringsEs.viewDetails),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: const BorderSide(color: AppColors.primary),

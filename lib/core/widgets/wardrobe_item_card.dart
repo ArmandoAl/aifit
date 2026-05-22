@@ -1,8 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'app_network_image.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../../features/wardrobe/domain/wardrobe_item_model.dart';
+import '../../features/wardrobe/domain/wardrobe_palette.dart';
 import '../../features/wardrobe/presentation/pages/wardrobe_item_detail_page.dart';
 
 class WardrobeItemCard extends StatelessWidget {
@@ -12,19 +13,7 @@ class WardrobeItemCard extends StatelessWidget {
 
   String get _categoryLabel {
     if (item.type.isEmpty) return '';
-    final t = item.type.toLowerCase();
-    switch (t) {
-      case 'top':
-        return 'Tops';
-      case 'bottom':
-        return 'Bottoms';
-      case 'shoes':
-        return 'Shoes';
-      case 'outerwear':
-        return 'Outerwear';
-      default:
-        return '${t[0].toUpperCase()}${t.substring(1)}';
-    }
+    return WardrobePalette.labelType(item.type.toLowerCase());
   }
 
   String? get _brandLine {
@@ -58,17 +47,17 @@ class WardrobeItemCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: CachedNetworkImage(
+                child: AppNetworkImage(
                   imageUrl: item.imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  placeholder: (_, __) => Container(
+                  placeholder: Container(
                     color: AppColors.surfaceContainer,
                     child: const Center(
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
-                  errorWidget: (_, __, ___) => Container(
+                  errorWidget: Container(
                     color: AppColors.surfaceContainer,
                     child: const Icon(
                       Icons.image_not_supported_outlined,

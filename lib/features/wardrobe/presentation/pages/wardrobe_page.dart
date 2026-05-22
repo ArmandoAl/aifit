@@ -12,32 +12,33 @@ import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
 import '../bloc/wardrobe_state.dart';
 import '../../../../core/widgets/wardrobe_item_card.dart';
+import '../../../../core/l10n/app_strings_es.dart';
+import '../../../wardrobe/domain/wardrobe_palette.dart';
 import 'add_wardrobe_item_page.dart';
 
 class WardrobePage extends StatelessWidget {
   const WardrobePage({super.key});
 
-  static const _filterLabels = {
-    'All': 'All',
-    'top': 'Tops',
-    'bottom': 'Bottoms',
-    'shoes': 'Shoes',
-    'outerwear': 'Outerwear',
-  };
+  static const _filterKeys = ['All', 'top', 'bottom', 'shoes', 'outerwear'];
+
+  static String _filterLabel(String key) {
+    if (key == 'All') return AppStringsEs.filterAll;
+    return WardrobePalette.labelType(key);
+  }
 
   Future<void> _showImageSourceDialog(BuildContext context) async {
     await LuxuryBottomSheet.show(
       context: context,
-      title: 'Add to wardrobe',
-      subtitle: 'Import pieces into your closet',
+      title: AppStringsEs.addToWardrobe,
+      subtitle: AppStringsEs.addToWardrobeSubtitle,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           LuxurySheetAction(
             animationIndex: 0,
             icon: Icons.photo_library_outlined,
-            title: 'Choose from Gallery',
-            subtitle: 'Select one or multiple photos',
+            title: AppStringsEs.chooseGallery,
+            subtitle: AppStringsEs.chooseGallerySubtitle,
             onTap: () async {
               final navigator = Navigator.of(context);
               navigator.pop();
@@ -61,8 +62,8 @@ class WardrobePage extends StatelessWidget {
           LuxurySheetAction(
             animationIndex: 1,
             icon: Icons.camera_alt_outlined,
-            title: 'Take a Photo',
-            subtitle: 'Capture the item with your camera',
+            title: AppStringsEs.takePhoto,
+            subtitle: AppStringsEs.takePhotoSubtitle,
             onTap: () async {
               final navigator = Navigator.of(context);
               navigator.pop();
@@ -93,21 +94,21 @@ class WardrobePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filters = _filterLabels.keys.toList();
+    final filters = _filterKeys;
 
     return BlocBuilder<WardrobeBloc, WardrobeState>(
       builder: (context, state) {
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppPageAppBar(
-            title: 'My Wardrobe',
-            subtitle: 'Curate your closet',
+            title: AppStringsEs.myWardrobe,
+            subtitle: AppStringsEs.curateCloset,
             automaticallyImplyLeading: false,
             actions: [
               IconButton(
                 onPressed: () {},
                 icon: const Icon(Icons.search_outlined),
-                tooltip: 'Search',
+                tooltip: AppStringsEs.search,
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -129,13 +130,13 @@ class WardrobePage extends StatelessWidget {
                 child: Row(
                   children: [
                     _StatCard(
-                      label: 'TOTAL ITEMS',
+                      label: AppStringsEs.totalItems,
                       value: state is WardrobeLoaded
                           ? state.allItems.length.toString()
                           : '0',
                     ),
                     const SizedBox(width: 12),
-                    const _StatCard(label: 'OUTFITS', value: '—'),
+                    const _StatCard(label: AppStringsEs.outfitsStat, value: '—'),
                   ],
                 ),
               ),
@@ -151,7 +152,7 @@ class WardrobePage extends StatelessWidget {
                     final isSelected = state is WardrobeLoaded &&
                         state.selectedCategory.toLowerCase() ==
                             category.toLowerCase();
-                    final label = _filterLabels[category] ?? category;
+                    final label = _filterLabel(category);
 
                     return FilterChip(
                       label: Text(label),
@@ -190,7 +191,7 @@ class WardrobePage extends StatelessWidget {
           floatingActionButton: FloatingActionButton(
             heroTag: 'wardrobe_ai_fab',
             onPressed: () => context.push('/generate-outfit'),
-            tooltip: 'Generate outfit with AI',
+            tooltip: AppStringsEs.generateOutfitAi,
             child: const Icon(Icons.auto_awesome),
           ),
           floatingActionButtonLocation:
@@ -205,11 +206,11 @@ class WardrobePage extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
     if (state is WardrobeError) {
-      return Center(child: Text('Error: ${state.message}'));
+      return Center(child: Text(AppStringsEs.errorWith(state.message)));
     }
     if (state is WardrobeLoaded) {
       if (state.filteredItems.isEmpty) {
-        return const Center(child: Text('No items found'));
+        return const Center(child: Text(AppStringsEs.noItemsFound));
       }
       return GridView.builder(
         padding: EdgeInsets.fromLTRB(
