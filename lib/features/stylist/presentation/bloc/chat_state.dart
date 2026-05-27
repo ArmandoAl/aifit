@@ -21,6 +21,7 @@ class ChatLoaded extends ChatState {
   final StylistIntentState accumulatedIntent;
   final bool readyToGenerate;
   final OutfitIntent? lastOutfitIntent;
+  final Map<String, String> lastWardrobeImageUrls;
 
   const ChatLoaded({
     required this.messages,
@@ -29,6 +30,7 @@ class ChatLoaded extends ChatState {
     this.accumulatedIntent = const StylistIntentState(),
     this.readyToGenerate = false,
     this.lastOutfitIntent,
+    this.lastWardrobeImageUrls = const {},
   });
 
   ChatLoaded copyWith({
@@ -38,6 +40,7 @@ class ChatLoaded extends ChatState {
     StylistIntentState? accumulatedIntent,
     bool? readyToGenerate,
     OutfitIntent? lastOutfitIntent,
+    Map<String, String>? lastWardrobeImageUrls,
   }) {
     return ChatLoaded(
       messages: messages ?? this.messages,
@@ -46,6 +49,8 @@ class ChatLoaded extends ChatState {
       accumulatedIntent: accumulatedIntent ?? this.accumulatedIntent,
       readyToGenerate: readyToGenerate ?? this.readyToGenerate,
       lastOutfitIntent: lastOutfitIntent ?? this.lastOutfitIntent,
+      lastWardrobeImageUrls:
+          lastWardrobeImageUrls ?? this.lastWardrobeImageUrls,
     );
   }
 
@@ -57,5 +62,6 @@ class ChatLoaded extends ChatState {
         accumulatedIntent,
         readyToGenerate,
         lastOutfitIntent,
+        lastWardrobeImageUrls,
       ];
 }

@@ -124,8 +124,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       _updateLoadingPhase(emit, 'generating');
 
+      final chatIntent = current.accumulatedIntent;
       final result = await _outfitService.generateOutfitSuggestions(
         userPrompt: prompt,
+        precomputedIntent: chatIntent.hasStructuredIntentForPipeline
+            ? chatIntent.toOutfitIntent()
+            : null,
       );
 
       final loaded = state as ChatLoaded;
@@ -168,6 +172,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           messages: resultMessages,
           isGenerating: false,
           lastOutfitIntent: result.intent,
+          lastWardrobeImageUrls: result.wardrobeImageUrlsByItemId,
         ),
       );
 
@@ -175,6 +180,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         await _generateTryOnAndUpdateMessage(
           outfitId: result.outfits.first.id,
           intent: result.intent,
+          wardrobeImageUrlsByItemId: result.wardrobeImageUrlsByItemId,
           emit: emit,
         );
       }
@@ -211,6 +217,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final url = await _outfitService.generateTryOnForOutfit(
         outfit: outfit,
         intent: current.lastOutfitIntent!,
+        wardrobeImageUrlsByItemId: current.lastWardrobeImageUrls,
       );
 
       _setOutfitTryOnStatus(
@@ -228,6 +235,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _generateTryOnAndUpdateMessage({
     required String outfitId,
     required pipeline.OutfitIntent intent,
+    required Map<String, String> wardrobeImageUrlsByItemId,
     required Emitter<ChatState> emit,
   }) async {
     final current = state;
@@ -240,6 +248,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final url = await _outfitService.generateTryOnForOutfit(
         outfit: outfit,
         intent: intent,
+        wardrobeImageUrlsByItemId: wardrobeImageUrlsByItemId,
       );
 
       _setOutfitTryOnStatus(

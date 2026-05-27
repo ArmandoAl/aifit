@@ -1,3 +1,4 @@
+import '../../outfit/domain/outfit_models.dart';
 import '../../outfit/domain/outfit_semantic_targets.dart';
 import '../../wardrobe/domain/wardrobe_palette.dart';
 
@@ -91,6 +92,32 @@ class StylistIntentState {
       occasion != null &&
       occasion!.isNotEmpty &&
       (styleTags.isNotEmpty || colors.isNotEmpty || vibe.isNotEmpty);
+
+  /// True when chat already captured enough structure to skip DeepSeek on generate.
+  bool get hasStructuredIntentForPipeline =>
+      hasMinimumContext ||
+      colors.isNotEmpty ||
+      styleTags.isNotEmpty ||
+      (semanticTargets != null && !semanticTargets!.isEmpty);
+
+  /// Maps stylist session intent → pipeline [OutfitIntent] (no DeepSeek round-trip).
+  OutfitIntent toOutfitIntent() {
+    final mergedStyleTags = <String>{
+      ...styleTags,
+      ...vibe,
+    }.toList();
+
+    return OutfitIntent(
+      reasoning: 'Structured intent from stylist chat',
+      occasion: occasion,
+      preferredColors: colors,
+      styleTags: mergedStyleTags,
+      season: season,
+      weather: weather,
+      userPrompt: toUserPrompt(),
+      semanticTargets: semanticTargets ?? const OutfitSemanticTargets(),
+    );
+  }
 
   /// Prompt natural para el pipeline existente (OutfitIntentAnalyzer refina después).
   String toUserPrompt() {

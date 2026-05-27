@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../features/profile/domain/user_identity_profile.dart';
 
 /// Identity preservation blocks for base image and try-on generation.
@@ -15,17 +17,20 @@ IDENTITY CONSISTENCY (mandatory):
 ''';
 
   static const String tryOnReinforcement = '''
-IDENTITY PRESERVATION (highest priority):
-Identity preservation is MORE important than artistic stylization.
+IDENTITY PRESERVATION (highest priority — overrides outfit styling):
+Identity preservation is MORE important than artistic stylization or fashion editorial look.
 
-- Preserve exact skin tone. Do not lighten skin tone.
+- Copy the face EXACTLY from the identity reference images. Do NOT invent a new face.
+- Preserve exact skin tone. Do not lighten or darken skin.
 - Preserve ethnicity. Do not alter ethnicity.
-- Preserve facial proportions and bone structure.
-- Preserve hairstyle, hair color, and hair density.
-- Preserve body type, shoulder width, and build.
-- The generated person must look like the SAME individual.
+- Preserve facial proportions, bone structure, nose, eyes, lips, jaw.
+- Preserve hairstyle, hair color, hairline, and hair density.
+- Preserve ALL visible accessories from references (glasses, earrings, etc.).
+- Preserve body type, shoulder width, height proportions, and build.
+- The output person must be recognizable as the SAME individual.
 
-Do NOT apply beauty retouching, skin lightening, or ethnic alteration.
+Do NOT apply beauty retouching, skin smoothing, face swapping, or ethnic alteration.
+Do NOT generate a generic model face.
 ''';
 
   static const String baseImageStyle = '''
@@ -54,10 +59,13 @@ VISUAL STYLE:
       lines.add('- ${face!.jawDefinition} jaw');
     }
     if (face?.eyeShape != null) lines.add('- ${face!.eyeShape} eyes');
+    if (face?.noseShape != null) lines.add('- ${face!.noseShape} nose');
 
     final hair = profile.hair;
     if (hair?.color != null || hair?.style != null) {
-      final h = [hair?.color, hair?.style].whereType<String>().join(' ');
+      final h = [hair?.color, hair?.style, hair?.density]
+          .whereType<String>()
+          .join(' ');
       lines.add('- $h hair');
     }
 
@@ -70,8 +78,70 @@ VISUAL STYLE:
     if (body?.shoulderWidth != null) {
       lines.add('- ${body!.shoulderWidth} shoulders');
     }
+    if (body?.proportions != null) {
+      lines.add('- ${body!.proportions} proportions');
+    }
+
+    final visual = profile.visualCharacteristics;
+    if (visual?.facialSharpness != null) {
+      lines.add('- ${visual!.facialSharpness} facial sharpness');
+    }
+    if (visual?.contrastLevel != null) {
+      lines.add('- ${visual!.contrastLevel} contrast');
+    }
 
     return lines.length > 1 ? lines.join('\n') : '';
+  }
+
+  static String profileJsonBlock(IdentityProfile? profile) {
+    if (profile == null || profile.isEmpty) return '';
+    final json = const JsonEncoder.withIndent('  ').convert(profile.toJson());
+    return '''
+[IDENTITY_PROFILE_JSON]
+Use this structured profile to lock identity. It must match the reference images:
+$json
+''';
+  }
+
+  static String tryOnImageRoles({
+    required bool hasBaseImage,
+    required bool hasFaceAnchor,
+    required int garmentCount,
+  }) {
+    final lines = <String>['[INPUT_IMAGES — read in order]'];
+    var index = 1;
+
+    if (hasBaseImage) {
+      lines.add(
+        'Image $index: IDENTITY_BASE — full-body person template. '
+        'This IS the person. Keep face, skin, hair, body, pose structure. '
+        'ONLY clothing will change.',
+      );
+      index++;
+    }
+
+    if (hasFaceAnchor) {
+      lines.add(
+        'Image $index: FACE_ANCHOR — high-priority close-up face reference. '
+        'Match eyes, nose, lips, jaw, glasses, and skin tone EXACTLY.',
+      );
+      index++;
+    }
+
+    if (garmentCount > 0) {
+      final end = index + garmentCount - 1;
+      if (garmentCount == 1) {
+        lines.add(
+          'Image $index: GARMENT — apply this clothing item to the person.',
+        );
+      } else {
+        lines.add(
+          'Images $index–$end: GARMENTS — apply these clothing items to the person.',
+        );
+      }
+    }
+
+    return lines.join('\n');
   }
 
   static String buildBlock({IdentityProfile? profile, bool forTryOn = false}) {
@@ -88,5 +158,57 @@ VISUAL STYLE:
 
   static String buildTryOnBlock(IdentityProfile? profile) {
     return buildBlock(profile: profile, forTryOn: true);
+  }
+
+  /// Full try-on instruction block (aligned with base-image prompt quality).
+  static String buildTryOnPrompt({
+    required IdentityProfile? profile,
+    required bool hasBaseImage,
+    required bool hasFaceAnchor,
+    required int garmentCount,
+  }) {
+    final identityBlock = buildTryOnBlock(profile);
+    final imageRoles = tryOnImageRoles(
+      hasBaseImage: hasBaseImage,
+      hasFaceAnchor: hasFaceAnchor,
+      garmentCount: garmentCount,
+    );
+    final jsonBlock = profileJsonBlock(profile);
+
+    return '''
+[OUTPUT_SPECIFICATIONS]
+MODE: IMAGE_GENERATION
+TASK: VIRTUAL_TRY_ON (identity-locked clothing swap — NOT a new person)
+FORMAT: image/jpeg
+ASPECT_RATIO: 3:4
+QUALITY: PREMIUM_ECOMMERCE
+
+$imageRoles
+
+$identityBlock
+
+$jsonBlock
+
+[INSTRUCTION]
+Perform a virtual try-on on the EXISTING person from the identity reference image(s).
+Replace ONLY their clothing with the garment reference images.
+The face and identity MUST remain the same person — recognizable and faithful to references.
+
+[REQUIREMENTS]
+- Identity match is the #1 priority — face must look like the reference person
+- Apply garment colors, textures, and fit from garment images
+- Full-body or 3/4 ecommerce catalog framing, neutral studio background
+- Soft even lighting, natural skin texture, no beauty filters
+- Realistic clothing drape and proportions on the SAME body
+
+[AVOID]
+- Generating a different face or generic model
+- Skin lightening, ethnic alteration, face beautification
+- Cinematic/editorial styling, dramatic shadows
+- Ignoring glasses or visible accessories from face reference
+
+[FINAL_OBJECTIVE]
+One photorealistic image of the SAME individual wearing the complete outfit.
+''';
   }
 }

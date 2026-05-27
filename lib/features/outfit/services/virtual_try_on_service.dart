@@ -7,8 +7,10 @@ import 'package:dio/dio.dart';
 
 import '../../../core/constants/identity_consistency_prompt.dart';
 import '../../../core/platform/network_image_loader.dart';
+import '../../../core/services/image_byte_cache.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/image_compression_util.dart';
+import '../../../core/utils/ui_frame_yield.dart';
 import '../domain/outfit_models.dart';
 import 'user_base_image_service.dart';
 
@@ -44,45 +46,56 @@ class VirtualTryOnService {
         }
       }
 
-      final garmentBytes = <Uint8List>[];
-
-      for (final imageUrl in request.itemImageUrls) {
+      // Face anchor improves likeness even when base image exists (close-up detail).
+      Uint8List? userFaceBytes;
+      if (request.userFacePhotoUrl != null &&
+          request.userFacePhotoUrl!.isNotEmpty) {
         try {
-          garmentBytes.add(
-            await NetworkImageLoader.downloadBytes(_dio, imageUrl),
+          userFaceBytes = await NetworkImageLoader.downloadBytes(
+            _dio,
+            request.userFacePhotoUrl!,
           );
+          debugPrint('✅ Face anchor loaded for try-on');
         } catch (e) {
-          debugPrint('⚠️ Failed to download item image: $e');
+          debugPrint('⚠️ Failed to download face anchor: $e');
         }
       }
+
+      final garmentBytes = await ImageByteCache.instance.prepareGarmentBytesForUrls(
+        dio: _dio,
+        urls: request.itemImageUrls,
+      );
 
       Uint8List? userBodyBytes;
-      Uint8List? userFaceBytes;
-
-      if (userBaseImageBytes == null) {
-        if (request.userBodyPhotoUrl != null) {
-          try {
-            userBodyBytes = await NetworkImageLoader.downloadBytes(
-              _dio,
-              request.userBodyPhotoUrl!,
-            );
-          } catch (e) {
-            debugPrint('⚠️ Failed to download user body photo: $e');
-          }
-        }
-        if (request.userFacePhotoUrl != null) {
-          try {
-            userFaceBytes = await NetworkImageLoader.downloadBytes(
-              _dio,
-              request.userFacePhotoUrl!,
-            );
-          } catch (e) {
-            debugPrint('⚠️ Failed to download user face photo: $e');
-          }
+      if (userBaseImageBytes == null && request.userBodyPhotoUrl != null) {
+        try {
+          userBodyBytes = await NetworkImageLoader.downloadBytes(
+            _dio,
+            request.userBodyPhotoUrl!,
+          );
+        } catch (e) {
+          debugPrint('⚠️ Failed to download user body photo: $e');
         }
       }
 
-      final prompt = _buildTryOnPrompt(request);
+      final hasBase = userBaseImageBytes != null;
+      final hasFace = userFaceBytes != null;
+      final hasBody = userBodyBytes != null;
+
+      debugPrint(
+        '📸 Try-on payload: base=$hasBase face=$hasFace body=$hasBody '
+        'garments=${garmentBytes.length} '
+        'identityProfile=${request.identityProfile != null && !request.identityProfile!.isEmpty}',
+      );
+
+      final prompt = IdentityConsistencyPrompt.buildTryOnPrompt(
+        profile: request.identityProfile,
+        hasBaseImage: hasBase,
+        hasFaceAnchor: hasFace,
+        garmentCount: garmentBytes.length,
+      );
+
+      await yieldToUi();
 
       final model = FirebaseAI.vertexAI().generativeModel(
         model: 'gemini-2.5-flash-image',
@@ -116,32 +129,26 @@ class VirtualTryOnService {
 
       final parts = <Part>[];
 
+      // Image 1: identity base — send raw to avoid double JPEG loss on face detail.
       if (userBaseImageBytes != null) {
+        parts.add(InlineDataPart('image/jpeg', userBaseImageBytes));
+      } else if (userBodyBytes != null) {
         final bytes = await ImageCompressionUtil.compressIdentityBytes(
-          userBaseImageBytes,
+          userBodyBytes,
         );
         parts.add(InlineDataPart('image/jpeg', bytes));
-      } else {
-        if (userBodyBytes != null) {
-          final bytes = await ImageCompressionUtil.compressIdentityBytes(
-            userBodyBytes,
-          );
-          parts.add(InlineDataPart('image/jpeg', bytes));
-        }
-        if (userFaceBytes != null) {
-          final bytes = await ImageCompressionUtil.compressIdentityBytes(
-            userFaceBytes,
-          );
-          parts.add(InlineDataPart('image/jpeg', bytes));
-        }
+      }
+
+      // Image 2: face close-up anchor (glasses, facial detail).
+      if (userFaceBytes != null) {
+        final bytes = await ImageCompressionUtil.compressIdentityBytes(
+          userFaceBytes,
+        );
+        parts.add(InlineDataPart('image/jpeg', bytes));
       }
 
       for (final bytes in garmentBytes) {
-        final compressed = await ImageCompressionUtil.compressBytes(
-          bytes,
-          payload: AiImagePayload.garment,
-        );
-        parts.add(InlineDataPart('image/jpeg', compressed));
+        parts.add(InlineDataPart('image/jpeg', bytes));
       }
 
       parts.add(TextPart(prompt));
@@ -162,34 +169,6 @@ class VirtualTryOnService {
       debugPrint('❌ Error generating try-on image: $e');
       throw Exception('Failed to generate try-on image: $e');
     }
-  }
-
-  String _buildTryOnPrompt(VirtualTryOnRequest request) {
-    final outfit = request.outfit;
-    final identityBlock = IdentityConsistencyPrompt.buildTryOnBlock(
-      request.identityProfile,
-    );
-
-    return """
-Generate a realistic ecommerce-style photograph: the SAME person wearing a complete outfit.
-
-$identityBlock
-
-OUTFIT DETAILS:
-- Top: ${outfit.topId ?? 'N/A'}
-- Bottom: ${outfit.bottomId ?? 'N/A'}
-- Shoes: ${outfit.shoesId ?? 'N/A'}
-${outfit.outerwearId != null ? '- Outerwear: ${outfit.outerwearId}' : ''}
-
-REQUIREMENTS:
-- Apply garment images to the person in the identity/base reference image
-- Clothing must fit naturally; colors and textures from garment references
-- Clean neutral or simple background, soft even lighting
-- Natural pose, realistic proportions
-- Premium ecommerce quality — NOT editorial or cinematic
-
-Generate one high-quality image of the same individual wearing the full outfit.
-""";
   }
 
   Future<String?> _extractAndUploadImage(GenerateContentResponse response) async {

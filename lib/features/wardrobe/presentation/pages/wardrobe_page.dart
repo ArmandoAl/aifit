@@ -212,22 +212,58 @@ class WardrobePage extends StatelessWidget {
       if (state.filteredItems.isEmpty) {
         return const Center(child: Text(AppStringsEs.noItemsFound));
       }
-      return GridView.builder(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          ShellBottomInsets.withFab(context),
-        ),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.68,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: state.filteredItems.length,
-        itemBuilder: (context, index) {
-          return WardrobeItemCard(item: state.filteredItems[index]);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          const crossAxisCount = 2;
+          const crossAxisSpacing = 12.0;
+          const horizontalPadding = 16.0;
+          final innerWidth =
+              constraints.maxWidth - horizontalPadding * 2;
+          final cellWidth =
+              (innerWidth - crossAxisSpacing) / crossAxisCount;
+          const childAspectRatio = 0.68;
+          final cellHeight = cellWidth / childAspectRatio;
+
+          final items = state.filteredItems;
+          final bottomPad = ShellBottomInsets.withFab(context);
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              8,
+              horizontalPadding,
+              bottomPad,
+            ),
+            child: Column(
+              children: [
+                for (var row = 0; row < (items.length + 1) ~/ 2; row++) ...[
+                  if (row > 0) const SizedBox(height: crossAxisSpacing),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: cellHeight,
+                          child: WardrobeItemCard(item: items[row * 2]),
+                        ),
+                      ),
+                      const SizedBox(width: crossAxisSpacing),
+                      Expanded(
+                        child: row * 2 + 1 < items.length
+                            ? SizedBox(
+                                height: cellHeight,
+                                child: WardrobeItemCard(
+                                  item: items[row * 2 + 1],
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          );
         },
       );
     }

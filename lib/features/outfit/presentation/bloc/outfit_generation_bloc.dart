@@ -52,6 +52,7 @@ class OutfitGenerationBloc
         outfits: result.outfits,
         intent: result.intent,
         tryOnStatuses: statuses,
+        wardrobeImageUrlsByItemId: result.wardrobeImageUrlsByItemId,
       );
 
       emit(loaded);
@@ -119,6 +120,7 @@ class OutfitGenerationBloc
       final url = await _outfitService.generateTryOnForOutfit(
         outfit: outfit,
         intent: loaded.intent,
+        wardrobeImageUrlsByItemId: loaded.wardrobeImageUrlsByItemId,
       );
 
       final latest = state;

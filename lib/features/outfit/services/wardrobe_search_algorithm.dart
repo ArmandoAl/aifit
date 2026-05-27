@@ -8,6 +8,10 @@ import 'wardrobe_metadata_scorer.dart';
 /// Filtra el guardarropa del usuario basado en criterios de búsqueda
 /// y calcula compatibilidad entre prendas para optimizar resultados.
 class WardrobeSearchAlgorithm {
+  static void _log(String message) {
+    if (kDebugMode) debugPrint(message);
+  }
+
   /// Filtra prendas basado en intención del usuario
   ///
   /// Retorna prendas separadas por tipo, ordenadas por relevancia
@@ -15,8 +19,8 @@ class WardrobeSearchAlgorithm {
     required List<WardrobeItem> allItems,
     required OutfitIntent intent,
   }) {
-    debugPrint('🔍 Filtering wardrobe with intent: ${intent.toJson()}');
-    debugPrint('   Total items: ${allItems.length}');
+    _log('🔍 Filtering wardrobe with intent: ${intent.toJson()}');
+    _log('   Total items: ${allItems.length}');
 
     // Separar por tipo
     final tops = allItems.where((item) => item.type == 'top').toList();
@@ -26,7 +30,7 @@ class WardrobeSearchAlgorithm {
         .where((item) => item.type == 'outerwear')
         .toList();
 
-    debugPrint(
+    _log(
       '   By type: ${tops.length} tops, ${bottoms.length} bottoms, ${shoes.length} shoes, ${outerwear.length} outerwear',
     );
 
@@ -66,7 +70,7 @@ class WardrobeSearchAlgorithm {
     final filtered = scoredItems.where((entry) {
       final passes = entry.value >= minScore;
       if (!passes) {
-        debugPrint(
+        _log(
           '   ❌ Item ${entry.key.id} filtered out: score ${entry.value.toStringAsFixed(2)} < $minScore',
         );
       }
@@ -76,7 +80,7 @@ class WardrobeSearchAlgorithm {
     // Ordenar por score descendente
     filtered.sort((a, b) => b.value.compareTo(a.value));
 
-    debugPrint('   Filtered ${filtered.length} items (min score: $minScore)');
+    _log('   Filtered ${filtered.length} items (min score: $minScore)');
 
     return filtered.map((entry) => entry.key).toList();
   }
@@ -160,14 +164,14 @@ class WardrobeSearchAlgorithm {
 
           if (!hasMentionedColor) {
             // Si no tiene ninguno de los colores mencionados, EXCLUIR completamente
-            debugPrint(
+            _log(
               '   ❌ Item ${item.id} (${item.type}) excluded: mustInclude requires ${mentionedColors.join(' or ')} $requiredType but item has colors: ${item.colors}',
             );
             return 0.0;
           } else {
             // Si tiene el color, boost significativo
             score += 0.3;
-            debugPrint(
+            _log(
               '   ✅ Item ${item.id} matches mustInclude: has ${mentionedColors.join(' or ')}',
             );
           }
@@ -251,14 +255,14 @@ class WardrobeSearchAlgorithm {
           .length;
       if (colorMatches > 0) {
         score += 0.3 * (colorMatches / intent.preferredColors.length);
-        debugPrint(
+        _log(
           '   ✅ Item ${item.id} color match: $colorMatches/${intent.preferredColors.length} colors',
         );
       } else {
         // Penalización más fuerte si no hay match de colores
         // Si el usuario especificó colores, es importante
         score -= 0.35; // Penalización significativa (pero no tan drástica)
-        debugPrint(
+        _log(
           '   ⚠️ Item ${item.id} penalized: no color match. Item colors: ${item.colors}, Preferred: ${intent.preferredColors}',
         );
       }
@@ -282,7 +286,7 @@ class WardrobeSearchAlgorithm {
     final metadataBoost = WardrobeMetadataScorer.scoreMetadata(item, intent);
     if (metadataBoost > 0) {
       score += metadataBoost;
-      debugPrint(
+      _log(
         '   ✨ Item ${item.id} metadata boost: +${metadataBoost.toStringAsFixed(2)}',
       );
     }

@@ -32,10 +32,7 @@ class ImageCompressionUtil {
 
   static Future<Uint8List> compressIdentityBytes(Uint8List bytes) async {
     if (bytes.isEmpty) return bytes;
-    return compute(
-      _encodeInIsolate,
-      _EncodeParams(bytes: bytes, payload: AiImagePayload.identity),
-    );
+    return _runEncode(bytes, payload: AiImagePayload.identity);
   }
 
   static Future<Uint8List> compressBytes(
@@ -43,10 +40,24 @@ class ImageCompressionUtil {
     AiImagePayload payload = AiImagePayload.garment,
   }) async {
     if (payload == AiImagePayload.raw) return bytes;
-    return compute(
-      _encodeInIsolate,
-      _EncodeParams(bytes: bytes, payload: payload),
-    );
+    if (bytes.isEmpty) return bytes;
+    return _runEncode(bytes, payload: payload);
+  }
+
+  /// Web: encode on UI isolate with a frame yield (avoid worker copy jank).
+  /// Mobile/desktop: [compute] keeps decode/resize off the UI thread.
+  static Future<Uint8List> _runEncode(
+    Uint8List bytes, {
+    required AiImagePayload payload,
+  }) async {
+    final params = _EncodeParams(bytes: bytes, payload: payload);
+
+    if (kIsWeb) {
+      await Future<void>.delayed(Duration.zero);
+      return _encodeInIsolate(params);
+    }
+
+    return compute(_encodeInIsolate, params);
   }
 }
 

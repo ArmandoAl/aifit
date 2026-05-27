@@ -124,21 +124,79 @@ class GeneratedOutfit {
   }
 
   factory GeneratedOutfit.fromJson(Map<String, dynamic> json) {
+    String? pickId(dynamic v) {
+      if (v == null) return null;
+      final s = v.toString().trim();
+      return s.isEmpty ? null : s;
+    }
+
+    // Gemini occasionally returns snake_case or alternate keys.
+    final topId = pickId(json['topId']) ??
+        pickId(json['top_id']) ??
+        pickId(json['top']) ??
+        pickId(json['topItemId']);
+    final bottomId = pickId(json['bottomId']) ??
+        pickId(json['bottom_id']) ??
+        pickId(json['bottom']) ??
+        pickId(json['bottomItemId']);
+    final shoesId = pickId(json['shoesId']) ??
+        pickId(json['shoes_id']) ??
+        pickId(json['shoes']) ??
+        pickId(json['shoe_id']) ??
+        pickId(json['shoesItemId']);
+    final outerwearId = pickId(json['outerwearId']) ??
+        pickId(json['outerwear_id']) ??
+        pickId(json['outerwear']);
+
     return GeneratedOutfit(
-      id: json['id'] ?? json['outfitId'] ?? '',
-      topId: json['topId'],
-      bottomId: json['bottomId'],
-      shoesId: json['shoesId'],
-      outerwearId: json['outerwearId'],
-      matchPercentage: json['matchPercentage'] ?? 0,
-      explanation: json['explanation'] ?? json['text'] ?? '',
+      id:
+          json['id']?.toString() ??
+          json['outfitId']?.toString() ??
+          '',
+      topId: topId,
+      bottomId: bottomId,
+      shoesId: shoesId,
+      outerwearId: outerwearId,
+      matchPercentage:
+          json['matchPercentage'] is num
+              ? (json['matchPercentage'] as num).round()
+              : int.tryParse(
+                    json['matchPercentage']?.toString() ??
+                        json['match_percentage']?.toString() ??
+                        '',
+                  ) ??
+                  0,
+      explanation:
+          json['explanation']?.toString() ??
+          json['text']?.toString() ??
+          '',
       explanationEs:
           json['explanationEs']?.toString() ??
           json['explanation_es']?.toString() ??
           '',
-      compatibilityScore: (json['compatibilityScore'] ?? 0.0).toDouble(),
+      compatibilityScore: _parseCompat(json['compatibilityScore'] ??
+          json['compatibility_score']),
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
+  }
+
+  static double _parseCompat(dynamic v) {
+    if (v is num) return v.toDouble();
+    return double.tryParse(v?.toString() ?? '') ?? 0.0;
+  }
+
+  bool get hasCompleteLook =>
+      topId != null &&
+      bottomId != null &&
+      shoesId != null;
+
+  /// For debug / user-visible errors when [hasCompleteLook] is false.
+  String get missingFieldsSummary {
+    final miss = <String>[];
+    if (topId == null) miss.add('top');
+    if (bottomId == null) miss.add('bottom');
+    if (shoesId == null) miss.add('shoes');
+    return miss.join(', ');
   }
 
   Map<String, dynamic> toJson() {

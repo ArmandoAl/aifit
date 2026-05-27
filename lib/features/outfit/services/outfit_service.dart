@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../wardrobe/data/wardrobe_repository_impl.dart';
+import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/domain/user_identity_profile.dart';
 import '../domain/outfit_models.dart';
@@ -32,9 +35,12 @@ class OutfitService {
   _UserTryOnContext? _cachedTryOnContext;
   String? _cachedTryOnUserId;
 
-  /// Fases 1–3: genera outfits y los guarda sin imágenes de try-on.
+  /// Fases 1–3: genera outfits; persistencia Firestore en segundo plano.
+  ///
+  /// Si [precomputedIntent] viene del chat, se omite DeepSeek.
   Future<OutfitGenerationResult> generateOutfitSuggestions({
     required String userPrompt,
+    OutfitIntent? precomputedIntent,
   }) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw Exception('User not logged in');
@@ -43,12 +49,20 @@ class OutfitService {
       debugPrint('🚀 Outfit suggestions (phases 1–3)');
       debugPrint('   Prompt: "$userPrompt"');
 
-      final intent = await _intentAnalyzer.analyzeUserPrompt(userPrompt);
+      final intent = precomputedIntent ??
+          await _intentAnalyzer.analyzeUserPrompt(userPrompt);
+
+      if (precomputedIntent != null) {
+        debugPrint('✅ Using precomputed intent from stylist chat (DeepSeek skipped)');
+      }
+
       final allItems = await _wardrobeRepository.getWardrobeItems();
 
       if (allItems.isEmpty) {
         throw Exception('Your wardrobe is empty. Please add some items first.');
       }
+
+      final wardrobeImageUrlsByItemId = _imageUrlsByItemId(allItems);
 
       final filteredWardrobe = WardrobeSearchAlgorithm.filterWardrobe(
         allItems: allItems,
@@ -59,26 +73,66 @@ class OutfitService {
         throw Exception('No items match your request. Try different criteria.');
       }
 
+      if (filteredWardrobe.tops.isEmpty ||
+          filteredWardrobe.bottoms.isEmpty ||
+          filteredWardrobe.shoes.isEmpty) {
+        final missing = <String>[
+          if (filteredWardrobe.tops.isEmpty) 'superior',
+          if (filteredWardrobe.bottoms.isEmpty) 'inferior (pantalón/falda)',
+          if (filteredWardrobe.shoes.isEmpty) 'calzado',
+        ];
+        throw Exception(
+          'Con este pedido no hay suficientes prendas en el armario filtrado. '
+          'Falta: ${missing.join(', ')}. Por ejemplo pidiste negro pero quizá '
+          'no tienes pantalón/falda negro etiquetado, o el filtro lo excluyó. '
+          'Prueba otros colores, quita algún matiz o súbe más prendas.',
+        );
+      }
+
       final outfits = await _outfitGenerator.generateOutfits(
         filteredWardrobe: filteredWardrobe,
         intent: intent,
       );
 
-      final validOutfits = outfits.where((outfit) {
-        return outfit.topId != null &&
-            outfit.bottomId != null &&
-            outfit.shoesId != null;
-      }).toList();
+      final validOutfits =
+          outfits.where((outfit) => outfit.hasCompleteLook).toList();
 
       if (validOutfits.isEmpty) {
-        throw Exception('Failed to generate valid outfits. Please try again.');
+        if (outfits.isEmpty) {
+          throw Exception(
+            'La IA no devolvió ningún outfit. Intenta de nuevo o reformula '
+            'el pedido.',
+          );
+        }
+        final perOutfit = outfits
+            .map(
+              (o) =>
+                  '[${o.id.isEmpty ? "sin_id" : o.id}] falta(n): '
+                  '${o.missingFieldsSummary} '
+                  '(top="${o.topId ?? "—"}", bottom="${o.bottomId ?? "—"}", '
+                  'shoes="${o.shoesId ?? "—"}")',
+            )
+            .join(' | ');
+        debugPrint(
+          '❌ Ningún outfit con top+bottom+zapatos válidos. $perOutfit',
+        );
+        throw Exception(
+          'La IA armó propuestas pero sin IDs válidos para armar el look '
+          '(hacen falta prenda superior, inferior y calzado). '
+          'Detalle: $perOutfit '
+          'Suele pasar cuando el modelo envía otros nombres de campo '
+          '(p. ej. top_id); si persiste, intenta con menos filtros (colores).',
+        );
       }
 
-      await _saveOutfitsToFirestore(uid, validOutfits, intent, {});
+      unawaited(
+        _saveOutfitsToFirestore(uid, validOutfits, intent, {}),
+      );
 
       return OutfitGenerationResult(
         outfits: validOutfits,
         intent: intent,
+        wardrobeImageUrlsByItemId: wardrobeImageUrlsByItemId,
       );
     } catch (e) {
       if (e is FirebaseAIException) {
@@ -93,6 +147,7 @@ class OutfitService {
   Future<String?> generateTryOnForOutfit({
     required GeneratedOutfit outfit,
     required OutfitIntent intent,
+    Map<String, String>? wardrobeImageUrlsByItemId,
   }) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw Exception('User not logged in');
@@ -100,7 +155,10 @@ class OutfitService {
     try {
       debugPrint('🖼️ Try-on for outfit ${outfit.id}');
 
-      final itemImageUrls = await _getItemImageUrls(outfit);
+      final itemImageUrls = wardrobeImageUrlsByItemId != null
+          ? _resolveItemImageUrls(outfit, wardrobeImageUrlsByItemId)
+          : await _getItemImageUrls(outfit);
+
       if (itemImageUrls.isEmpty) {
         debugPrint('⚠️ No garment images for outfit ${outfit.id}');
         return null;
@@ -122,7 +180,9 @@ class OutfitService {
       final url = tryOnResult.generatedImageUrl;
       if (url.isEmpty) return null;
 
-      await _savedOutfitsRepository.updateTryOnImageUrl(outfit.id, url);
+      unawaited(
+        _savedOutfitsRepository.updateTryOnImageUrl(outfit.id, url),
+      );
       debugPrint('✅ Try-on ready for ${outfit.id}');
 
       return url;
@@ -136,8 +196,12 @@ class OutfitService {
   Future<OutfitGenerationResult> generateCompleteOutfit({
     required String userPrompt,
     bool generateImage = false,
+    OutfitIntent? precomputedIntent,
   }) async {
-    final base = await generateOutfitSuggestions(userPrompt: userPrompt);
+    final base = await generateOutfitSuggestions(
+      userPrompt: userPrompt,
+      precomputedIntent: precomputedIntent,
+    );
 
     if (!generateImage || base.outfits.isEmpty) {
       return base;
@@ -148,6 +212,7 @@ class OutfitService {
       final url = await generateTryOnForOutfit(
         outfit: first,
         intent: base.intent,
+        wardrobeImageUrlsByItemId: base.wardrobeImageUrlsByItemId,
       );
       if (url == null || url.isEmpty) return base;
 
@@ -156,11 +221,34 @@ class OutfitService {
         intent: base.intent,
         tryOnImageUrl: url,
         tryOnImageUrls: {first.id: url},
+        wardrobeImageUrlsByItemId: base.wardrobeImageUrlsByItemId,
       );
     } catch (e) {
       debugPrint('⚠️ First try-on failed, returning outfits without image: $e');
       return base;
     }
+  }
+
+  static Map<String, String> _imageUrlsByItemId(List<WardrobeItem> items) {
+    return {
+      for (final item in items)
+        if (item.id.isNotEmpty && item.imageUrl.isNotEmpty)
+          item.id: item.imageUrl,
+    };
+  }
+
+  static List<String> _resolveItemImageUrls(
+    GeneratedOutfit outfit,
+    Map<String, String> wardrobeImageUrlsByItemId,
+  ) {
+    final urls = <String>[];
+    for (final itemId in outfit.itemIds) {
+      final url = wardrobeImageUrlsByItemId[itemId];
+      if (url != null && url.isNotEmpty) {
+        urls.add(url);
+      }
+    }
+    return urls;
   }
 
   Future<List<String>> _getItemImageUrls(GeneratedOutfit outfit) async {
@@ -264,13 +352,16 @@ class OutfitGenerationResult {
   final OutfitIntent intent;
   final String? tryOnImageUrl;
   final Map<String, String> tryOnImageUrls;
+  final Map<String, String> wardrobeImageUrlsByItemId;
 
   OutfitGenerationResult({
     required this.outfits,
     required this.intent,
     this.tryOnImageUrl,
     Map<String, String>? tryOnImageUrls,
-  }) : tryOnImageUrls = tryOnImageUrls ?? {};
+    Map<String, String>? wardrobeImageUrlsByItemId,
+  })  : tryOnImageUrls = tryOnImageUrls ?? {},
+        wardrobeImageUrlsByItemId = wardrobeImageUrlsByItemId ?? {};
 
   String? getImageUrlForOutfit(String outfitId) {
     return tryOnImageUrls[outfitId] ?? tryOnImageUrl;

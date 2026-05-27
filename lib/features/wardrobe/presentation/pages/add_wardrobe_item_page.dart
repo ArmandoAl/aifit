@@ -286,37 +286,39 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
   }
 
   Widget _buildMultipleItemsForm() {
-    return ListView.builder(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: _selectedImages.length,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Image preview
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    height: 200,
-                    width: double.infinity,
-                    child: imageSourcePreview(
-                      _selectedImages[index],
-                      fit: BoxFit.cover,
+      child: Column(
+        children: [
+          for (var index = 0; index < _selectedImages.length; index++) ...[
+            if (index > 0) const SizedBox(height: 16),
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        height: 200,
+                        width: double.infinity,
+                        child: imageSourcePreview(
+                          _selectedImages[index],
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    _buildItemForm(index, isCompact: true),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                // Micro form
-                _buildItemForm(index, isCompact: true),
-              ],
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ],
+      ),
     );
   }
 

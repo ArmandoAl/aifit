@@ -5,8 +5,9 @@ import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
-import '../../../core/platform/network_image_loader.dart';
-import '../../../core/utils/image_compression_util.dart';
+import '../../../core/services/image_byte_cache.dart';
+import '../../../core/utils/concurrent_task_pool.dart';
+import '../../../core/utils/ui_frame_yield.dart';
 import '../../wardrobe/domain/wardrobe_item_model.dart';
 import '../domain/outfit_models.dart';
 
@@ -47,6 +48,8 @@ class OutfitGeneratorService {
 
       debugPrint('📥 Downloaded ${itemImages.length} item images');
 
+      await yieldToUi();
+
       // 4. Llamar a Gemini 2.5 Flash con imágenes (multimodal que analiza imágenes y genera JSON)
       // Configuración estricta de seguridad para evitar bloqueos
       final model = FirebaseAI.vertexAI().generativeModel(
@@ -82,20 +85,16 @@ class OutfitGeneratorService {
       // Construir contenido: primero imágenes comprimidas, luego texto
       final parts = <Part>[];
 
-      // Comprimir y agregar imágenes
       for (final entry in itemImages.entries) {
-        debugPrint('⚙️ Compressing garment for item: ${entry.key}');
-        final compressedBytes = await ImageCompressionUtil.compressBytes(
-          entry.value,
-          payload: AiImagePayload.garment,
-        );
-        parts.add(InlineDataPart('image/jpeg', compressedBytes));
+        parts.add(InlineDataPart('image/jpeg', entry.value));
       }
 
       // El texto se agrega al final para dar contexto a las imágenes previas
       parts.add(TextPart(prompt));
 
       final content = [Content.multi(parts)];
+
+      await yieldToUi();
 
       debugPrint('🤖 Calling Gemini 2.5 Flash to generate outfits...');
       final response = await model.generateContent(content);
@@ -250,13 +249,11 @@ IMPORTANT:
 """;
   }
 
-  /// Descarga imágenes de prendas para análisis
+  /// Downloads and compresses garment images in parallel (session cache).
   Future<Map<String, Uint8List>> _downloadItemImages(
     FilteredWardrobe wardrobe, {
     int maxItems = 20,
   }) async {
-    final downloadedImages = <String, Uint8List>{};
-
     final allItems = [
       ...wardrobe.tops,
       ...wardrobe.bottoms,
@@ -264,18 +261,16 @@ IMPORTANT:
       ...wardrobe.outerwear,
     ].take(maxItems).toList();
 
-    for (final item in allItems) {
-      try {
-        downloadedImages[item.id] = await NetworkImageLoader.downloadBytes(
-          _dio,
-          item.imageUrl,
-        );
-      } catch (e) {
-        debugPrint('⚠️ Failed to download image for item ${item.id}: $e');
-      }
-    }
+    final descriptors = allItems
+        .where((item) => item.imageUrl.isNotEmpty)
+        .map((item) => (id: item.id, imageUrl: item.imageUrl))
+        .toList();
 
-    return downloadedImages;
+    return ImageByteCache.instance.prepareGarmentImages(
+      dio: _dio,
+      items: descriptors,
+      concurrency: ConcurrentTaskPool.defaultConcurrency,
+    );
   }
 
   /// Parsea JSON de respuesta a lista de GeneratedOutfit
@@ -295,10 +290,30 @@ IMPORTANT:
       }
 
       return outfitsList
-          .map(
-            (outfitJson) =>
-                GeneratedOutfit.fromJson(outfitJson as Map<String, dynamic>),
-          )
+          .map((raw) {
+            Map<String, dynamic> asMap(dynamic e) {
+              if (e is Map<String, dynamic>) return Map<String, dynamic>.from(e);
+              if (e is Map) {
+                return Map<String, dynamic>.from(
+                  e.map((k, v) => MapEntry(k.toString(), v)),
+                );
+              }
+              throw FormatException(
+                'Expected outfit object, got ${e.runtimeType}',
+              );
+            }
+
+            try {
+              return GeneratedOutfit.fromJson(asMap(raw));
+            } catch (ee) {
+              final keysHint = raw is Map
+                  ? (raw.keys.take(15).join(', '))
+                  : 'n/a';
+              debugPrint(
+                  '⚠️ Parse outfit entry failed: $ee — raw keys: $keysHint');
+              rethrow;
+            }
+          })
           .toList();
     } catch (e) {
       debugPrint('❌ Error parsing outfits: $e');

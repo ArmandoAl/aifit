@@ -18,6 +18,7 @@ class OutfitGenerationLoaded extends OutfitGenerationState {
   final Map<String, String> tryOnImageUrls;
   final Map<String, TryOnStatus> tryOnStatuses;
   final Map<String, String> tryOnErrors;
+  final Map<String, String> wardrobeImageUrlsByItemId;
 
   OutfitGenerationLoaded({
     required this.outfits,
@@ -26,9 +27,11 @@ class OutfitGenerationLoaded extends OutfitGenerationState {
     Map<String, String>? tryOnImageUrls,
     Map<String, TryOnStatus>? tryOnStatuses,
     Map<String, String>? tryOnErrors,
+    Map<String, String>? wardrobeImageUrlsByItemId,
   })  : tryOnImageUrls = tryOnImageUrls ?? {},
         tryOnStatuses = tryOnStatuses ?? {},
-        tryOnErrors = tryOnErrors ?? {};
+        tryOnErrors = tryOnErrors ?? {},
+        wardrobeImageUrlsByItemId = wardrobeImageUrlsByItemId ?? {};
 
   String? getImageUrlForOutfit(String outfitId) {
     return tryOnImageUrls[outfitId] ?? tryOnImageUrl;
@@ -45,6 +48,7 @@ class OutfitGenerationLoaded extends OutfitGenerationState {
     Map<String, String>? tryOnImageUrls,
     Map<String, TryOnStatus>? tryOnStatuses,
     Map<String, String>? tryOnErrors,
+    Map<String, String>? wardrobeImageUrlsByItemId,
   }) {
     return OutfitGenerationLoaded(
       outfits: outfits ?? this.outfits,
@@ -53,6 +57,8 @@ class OutfitGenerationLoaded extends OutfitGenerationState {
       tryOnImageUrls: tryOnImageUrls ?? this.tryOnImageUrls,
       tryOnStatuses: tryOnStatuses ?? this.tryOnStatuses,
       tryOnErrors: tryOnErrors ?? this.tryOnErrors,
+      wardrobeImageUrlsByItemId:
+          wardrobeImageUrlsByItemId ?? this.wardrobeImageUrlsByItemId,
     );
   }
 }
