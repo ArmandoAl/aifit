@@ -2,16 +2,13 @@
 
 AIFit convierte el armario real de una persona en un **grafo semántico de prendas** y genera looks personalizados con try-on virtual. No recomienda catálogo: trabaja con lo que ya tienes.
 
-**App en producción:** [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app)  
-Atelier (chat): [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
-
 Este README documenta las **tecnologías**, cómo se **da contexto a los modelos** y se **comprimen las imágenes**, los **modelos de outfit**, y la **arquitectura / organización de carpetas**.
 
 ---
 
 ## Capturas de producto
 
-App en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app) · Atelier: [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
+App en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app)
 
 <table>
   <tr>
