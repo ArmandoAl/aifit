@@ -32,7 +32,17 @@ class LoginPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     children: [
-                      const Spacer(flex: 3),
+                      const SizedBox(height: 28),
+                      Text(
+                        'LOOKBOOK DIGITAL',
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 4.4,
+                          color: AppColors.gold.withValues(alpha: 0.9),
+                        ),
+                      ),
+                      const Spacer(flex: 2),
                       const AtelierWordmark(
                         color: AppColors.onInverseSurface,
                         fontSize: 56,
@@ -62,7 +72,13 @@ class LoginPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Spacer(flex: 4),
+                      const Spacer(flex: 3),
+                      Container(
+                        width: 48,
+                        height: 0.8,
+                        color: AppColors.gold.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 28),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           final isLoading =
@@ -102,17 +118,7 @@ class LoginPage extends StatelessWidget {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Image.asset(
-                                          'assets/images/google_logo.png',
-                                          width: 20,
-                                          height: 20,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(
-                                            Icons.g_mobiledata,
-                                            size: 26,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
+                                        const _GoogleMark(),
                                         const SizedBox(width: 12),
                                         Text(
                                           AppStringsEs.continueWithGoogle
@@ -149,6 +155,32 @@ class LoginPage extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Text(
+        'G',
+        style: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          height: 1,
+          color: const Color(0xFF4285F4),
         ),
       ),
     );

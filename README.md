@@ -269,3 +269,21 @@ firebase deploy --only hosting
 ```
 
 Hosting sirve `build/web` con rewrite SPA a `index.html`.
+
+### Preview actual
+
+El entorno de este agente **no tenía sesión de Firebase CLI**, así que el hosting de producto (`aifit-a7f6b.web.app`) no se pudo publicar desde aquí.
+
+Preview temporal (Vercel, reclamar para que no caduque):
+
+- App: https://temporary-swift-apogee-mo8us1l.vercel.app
+- Reclamar: https://vercel.com/claim-deployment?code=6cf4fe91-3170-4b7b-a354-62abc11929fc
+
+Cuando puedas autenticar Firebase en local o con `FIREBASE_TOKEN`:
+
+```bash
+flutter build web --release
+firebase deploy --only hosting
+```
+
+La URL de producción del proyecto es `https://aifit-a7f6b.web.app`.
