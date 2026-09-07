@@ -250,7 +250,7 @@ lib/
     simulation/    presentation                  Resultado lookbook
 
 functions/                           # Samples Genkit (no es el path de producción)
-docs/                                # Arquitectura, pricing, prompts, capturas (`docs/images/`)
+docs/images/                         # Capturas de producto
 web/                                 # index.html, manifest PWA
 android/ ios/                        # Hosts nativos
 ```
