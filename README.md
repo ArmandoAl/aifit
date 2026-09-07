@@ -11,27 +11,9 @@ Este README documenta las **tecnologías**, cómo se **da contexto a los modelos
 
 ## Capturas de producto
 
-Pantallas tomadas de la web en Firebase Hosting (`aifit-a7f6b.web.app`). Las rutas de armario y atelier requieren sesión con Google.
+Las capturas de la app en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app) viven en `docs/screenshots/`.
 
-### Login — Maison
-
-![Login Maison](docs/screenshots/01-login.png)
-
-### Onboarding 01 — Identidad
-
-![Onboarding identidad](docs/screenshots/02-onboarding-identidad.png)
-
-### Onboarding 02 — Armario
-
-![Onboarding armario](docs/screenshots/03-onboarding-armario.png)
-
-### Onboarding 03 — Recomendaciones
-
-![Onboarding recomendaciones](docs/screenshots/04-onboarding-recomendaciones.png)
-
-### Identidad — Lookbook personal
-
-![Lookbook de identidad](docs/screenshots/05-identidad-lookbook.png)
+Atelier: [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
 
 ---
 
