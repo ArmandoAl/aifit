@@ -62,7 +62,7 @@ class AIFitApp extends StatelessWidget {
         builder: (context) {
           // Ahora este context SÍ tiene acceso a los BlocProviders
           return MaterialApp.router(
-            title: 'AIFit',
+            title: 'AIFit Atelier',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             routerConfig: createRouter(context),

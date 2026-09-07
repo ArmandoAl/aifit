@@ -8,6 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/luxury_bottom_sheet.dart';
 import '../../../../core/widgets/shell_bottom_insets.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
+import '../../../../core/widgets/atelier_empty_state.dart';
 import '../bloc/wardrobe_bloc.dart';
 import '../bloc/wardrobe_event.dart';
 import '../bloc/wardrobe_state.dart';
@@ -111,13 +112,14 @@ class WardrobePage extends StatelessWidget {
                 tooltip: AppStringsEs.search,
               ),
               Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton.filledTonal(
+                padding: const EdgeInsets.only(right: 12),
+                child: IconButton(
                   onPressed: () => _showImageSourceDialog(context),
-                  icon: const Icon(Icons.add, size: 22),
+                  icon: const Icon(Icons.add),
+                  tooltip: AppStringsEs.addItem,
                   style: IconButton.styleFrom(
-                    backgroundColor: AppColors.surfaceContainerLow,
-                    foregroundColor: AppColors.onSurface,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
                   ),
                 ),
               ),
@@ -126,24 +128,28 @@ class WardrobePage extends StatelessWidget {
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Row(
                   children: [
                     _StatCard(
                       label: AppStringsEs.totalItems,
                       value: state is WardrobeLoaded
-                          ? state.allItems.length.toString()
-                          : '0',
+                          ? state.allItems.length.toString().padLeft(2, '0')
+                          : '00',
                     ),
                     const SizedBox(width: 12),
-                    const _StatCard(label: AppStringsEs.outfitsStat, value: '—'),
+                    const _StatCard(
+                      label: AppStringsEs.outfitsStat,
+                      value: '—',
+                      kicker: 'LOOKS',
+                    ),
                   ],
                 ),
               ),
               SizedBox(
-                height: 52,
+                height: 48,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   scrollDirection: Axis.horizontal,
                   itemCount: filters.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -155,7 +161,7 @@ class WardrobePage extends StatelessWidget {
                     final label = _filterLabel(category);
 
                     return FilterChip(
-                      label: Text(label),
+                      label: Text(label.toUpperCase()),
                       selected: isSelected,
                       showCheckmark: false,
                       onSelected: (_) => context.read<WardrobeBloc>().add(
@@ -167,9 +173,9 @@ class WardrobePage extends StatelessWidget {
                         color: isSelected
                             ? AppColors.onInverseSurface
                             : AppColors.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                        letterSpacing: 1.4,
                       ),
                       side: BorderSide(
                         color: isSelected
@@ -179,7 +185,7 @@ class WardrobePage extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppTheme.radiusXl),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                     );
                   },
                 ),
@@ -188,14 +194,10 @@ class WardrobePage extends StatelessWidget {
               Expanded(child: _buildGridContent(context, state)),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            heroTag: 'wardrobe_ai_fab',
-            onPressed: () => context.push('/generate-outfit'),
-            tooltip: AppStringsEs.generateOutfitAi,
-            child: const Icon(Icons.auto_awesome),
+          floatingActionButton: _LookCta(
+            onTap: () => context.push('/generate-outfit'),
           ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.endFloat,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );
@@ -203,25 +205,35 @@ class WardrobePage extends StatelessWidget {
 
   Widget _buildGridContent(BuildContext context, WardrobeState state) {
     if (state is WardrobeLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.gold, strokeWidth: 2),
+      );
     }
     if (state is WardrobeError) {
-      return Center(child: Text(AppStringsEs.errorWith(state.message)));
+      return AtelierEmptyState(
+        icon: Icons.error_outline,
+        title: AppStringsEs.error,
+        subtitle: state.message,
+      );
     }
     if (state is WardrobeLoaded) {
       if (state.filteredItems.isEmpty) {
-        return const Center(child: Text(AppStringsEs.noItemsFound));
+        return AtelierEmptyState(
+          icon: Icons.checkroom_outlined,
+          title: AppStringsEs.emptyWardrobeTitle,
+          subtitle: AppStringsEs.emptyWardrobeSubtitle,
+          actionLabel: AppStringsEs.addFirstPiece,
+          onAction: () => _showImageSourceDialog(context),
+        );
       }
       return LayoutBuilder(
         builder: (context, constraints) {
           const crossAxisCount = 2;
-          const crossAxisSpacing = 12.0;
-          const horizontalPadding = 16.0;
-          final innerWidth =
-              constraints.maxWidth - horizontalPadding * 2;
-          final cellWidth =
-              (innerWidth - crossAxisSpacing) / crossAxisCount;
-          const childAspectRatio = 0.68;
+          const crossAxisSpacing = 14.0;
+          const horizontalPadding = 20.0;
+          final innerWidth = constraints.maxWidth - horizontalPadding * 2;
+          final cellWidth = (innerWidth - crossAxisSpacing) / crossAxisCount;
+          const childAspectRatio = 0.66;
           final cellHeight = cellWidth / childAspectRatio;
 
           final items = state.filteredItems;
@@ -267,15 +279,24 @@ class WardrobePage extends StatelessWidget {
         },
       );
     }
-    return const Center(child: Text('No data available'));
+    return const AtelierEmptyState(
+      icon: Icons.checkroom_outlined,
+      title: AppStringsEs.noData,
+      subtitle: AppStringsEs.emptyWardrobeSubtitle,
+    );
   }
 }
 
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
+  final String? kicker;
 
-  const _StatCard({required this.label, required this.value});
+  const _StatCard({
+    required this.label,
+    required this.value,
+    this.kicker,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -289,27 +310,71 @@ class _StatCard extends StatelessWidget {
           elevation: 0,
           margin: EdgeInsets.zero,
           child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (kicker ?? label).toUpperCase(),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.gold,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (kicker != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LookCta extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _LookCta({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+              const Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: AppColors.onPrimary,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(width: 8),
               Text(
-                label,
+                'NUEVO LOOK',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.tertiary,
-                      letterSpacing: 0.6,
+                      color: AppColors.onPrimary,
+                      letterSpacing: 1.6,
                     ),
               ),
             ],
           ),
-        ),
         ),
       ),
     );

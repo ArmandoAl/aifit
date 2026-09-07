@@ -47,51 +47,66 @@ class WardrobeItemCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: AppNetworkImage(
-                  imageUrl: item.imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  placeholder: Container(
-                    color: AppColors.surfaceContainer,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AppNetworkImage(
+                      imageUrl: item.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: Container(
+                        color: AppColors.surfaceContainer,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.gold,
+                          ),
+                        ),
+                      ),
+                      errorWidget: Container(
+                        color: AppColors.surfaceContainer,
+                        child: const Icon(
+                          Icons.image_not_supported_outlined,
+                          color: AppColors.tertiary,
+                        ),
+                      ),
                     ),
-                  ),
-                  errorWidget: Container(
-                    color: AppColors.surfaceContainer,
-                    child: const Icon(
-                      Icons.image_not_supported_outlined,
-                      color: AppColors.tertiary,
-                    ),
-                  ),
+                    if (_categoryLabel.isNotEmpty)
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _categoryLabel.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  border: Border(
-                    top: BorderSide(color: AppColors.border, width: 1),
-                  ),
-                ),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                color: AppColors.surface,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_categoryLabel.isNotEmpty)
-                      Text(
-                        _categoryLabel,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.tertiary,
-                          letterSpacing: 0.8,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    const SizedBox(height: 2),
                     Text(
                       item.name,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         color: AppColors.onSurface,
                       ),
                       maxLines: 1,
@@ -100,8 +115,8 @@ class WardrobeItemCard extends StatelessWidget {
                     if (_brandLine != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        _brandLine!,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        _brandLine!.toUpperCase(),
+                        style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.secondary,
                         ),
                         maxLines: 1,

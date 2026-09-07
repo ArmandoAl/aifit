@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_bottom_sheet.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
+import '../../../../core/widgets/atelier_empty_state.dart';
 import '../bloc/saved_outfits_bloc.dart';
 import '../bloc/saved_outfits_event.dart';
 import '../bloc/saved_outfits_state.dart';
@@ -47,7 +48,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
     return Scaffold(
       appBar: AppSubpageAppBar(
         title: AppStringsEs.myOutfits,
-        subtitle: 'Saved try-on history',
+        subtitle: 'Historial de try-on',
         actions: [
           IconButton(
             icon: const Icon(Icons.tune_outlined),
@@ -87,33 +88,11 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
 
           if (state is SavedOutfitsLoaded) {
             if (state.outfits.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.checkroom_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No saved outfits yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Generate some outfits to see them here!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
+              return const AtelierEmptyState(
+                icon: Icons.checkroom_outlined,
+                title: 'Aún no hay looks',
+                subtitle:
+                    'Genera outfits con el atelier y aparecerán aquí como un lookbook personal.',
               );
             }
 

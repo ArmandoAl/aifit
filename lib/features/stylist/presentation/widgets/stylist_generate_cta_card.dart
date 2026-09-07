@@ -53,7 +53,7 @@ class StylistGenerateCtaCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'I have enough context to build looks from your wardrobe.',
+              'Tengo contexto suficiente para componer looks con tu armario.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),

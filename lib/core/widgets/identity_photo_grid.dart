@@ -67,11 +67,11 @@ class IdentityPhotoGrid extends StatelessWidget {
           onTap: photos.length < maxPhotos ? onAdd : null,
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
-                width: 1.5,
+                color: AppColors.gold.withValues(alpha: 0.35),
+                width: 1,
               ),
             ),
             child: Column(
@@ -84,7 +84,7 @@ class IdentityPhotoGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Add',
+                  'Añadir',
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.textSecondary.withValues(alpha: 0.7),

@@ -62,7 +62,7 @@ class _LuxuryBottomNavBarState extends State<LuxuryBottomNavBar> {
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
+                            color: AppColors.primary.withValues(alpha: 0.10),
               blurRadius: 28,
               offset: const Offset(0, 10),
             ),

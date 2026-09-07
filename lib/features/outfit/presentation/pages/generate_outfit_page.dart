@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/keyboard_utils.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_page_app_bar.dart';
+import '../../../../core/widgets/atelier_section_header.dart';
 import '../bloc/outfit_generation_bloc.dart';
 import '../bloc/outfit_generation_event.dart';
 import '../bloc/outfit_generation_state.dart';
@@ -81,7 +82,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'No outfits could be generated. Try a different description.',
+                    'No se pudieron generar looks. Prueba otra descripción.',
                   ),
                   backgroundColor: AppColors.error,
                 ),
@@ -96,15 +97,11 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header
-                  const Text(
-                    AppStringsEs.describeOutfitWant,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tell us what kind of outfit you\'re looking for. For example: "casual outfit for the weekend" or "formal look for a wedding"',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  AtelierSectionHeader(
+                    kicker: 'Composición',
+                    title: AppStringsEs.describeOutfitWant,
+                    subtitle:
+                        'Ejemplo: “cena de verano, lino y paleta tierra” o “look formal para una boda”.',
                   ),
                   const SizedBox(height: 24),
 
@@ -113,7 +110,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                     controller: _promptController,
                     decoration: InputDecoration(
                       labelText: AppStringsEs.outfitDescription,
-                      hintText: 'e.g., casual outfit for the weekend',
+                      hintText: 'ej. look casual de fin de semana',
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.auto_awesome),
                       suffixIcon: _promptController.text.isNotEmpty
@@ -341,7 +338,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
             // Items
             if (outfit.itemIds.isNotEmpty) ...[
               const Text(
-                'Items:',
+                'Prendas:',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               const SizedBox(height: 8),
@@ -377,7 +374,7 @@ class _GenerateOutfitPageState extends State<GenerateOutfitPage> {
                       context.push('/outfit-result', extra: chatOutfit);
                     },
                     icon: const Icon(Icons.visibility),
-                    label: const Text('View Details'),
+                    label: const Text('Ver detalle'),
                   ),
                 ),
                 const SizedBox(width: 8),
