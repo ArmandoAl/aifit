@@ -13,25 +13,34 @@ Este README documenta las **tecnologías**, cómo se **da contexto a los modelos
 
 App en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app) · Atelier: [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
 
-### Armario
-
-![Armario](docs/images/01-armario.png)
-
-### Perfil e identidad
-
-![Perfil](docs/images/02-perfil.png)
-
-### Historial de try-on
-
-![Mis outfits](docs/images/03-outfits.png)
-
-### Detalle de look
-
-![Detalle de outfit](docs/images/04-outfit-detalle.png)
-
-### Atelier
-
-![Atelier](docs/images/05-atelier.png)
+<table>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <p><strong>Armario</strong></p>
+      <img src="docs/images/01-armario.png" alt="Armario" width="280" />
+    </td>
+    <td align="center" valign="top" width="50%">
+      <p><strong>Perfil e identidad</strong></p>
+      <img src="docs/images/02-perfil.png" alt="Perfil" width="280" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <p><strong>Historial de try-on</strong></p>
+      <img src="docs/images/03-outfits.png" alt="Mis outfits" width="280" />
+    </td>
+    <td align="center" valign="top" width="50%">
+      <p><strong>Detalle de look</strong></p>
+      <img src="docs/images/04-outfit-detalle.png" alt="Detalle de outfit" width="280" />
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <p><strong>Atelier</strong></p>
+      <img src="docs/images/05-atelier.png" alt="Atelier" width="280" />
+    </td>
+  </tr>
+</table>
 
 ---
 
