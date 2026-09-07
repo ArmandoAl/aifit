@@ -2,24 +2,36 @@
 
 AIFit convierte el armario real de una persona en un **grafo semántico de prendas** y genera looks personalizados con try-on virtual. No recomienda catálogo: trabaja con lo que ya tienes.
 
+**App en producción:** [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app)  
+Atelier (chat): [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
+
 Este README documenta las **tecnologías**, cómo se **da contexto a los modelos** y se **comprimen las imágenes**, los **modelos de outfit**, y la **arquitectura / organización de carpetas**.
 
 ---
 
 ## Capturas de producto
 
-> Coloca aquí las capturas de la web desplegada (login, armario, atelier, perfil, look).  
-> Ruta sugerida: `docs/screenshots/`.
+Pantallas tomadas de la web en Firebase Hosting (`aifit-a7f6b.web.app`). Las rutas de armario y atelier requieren sesión con Google.
 
-| Pantalla | Captura |
-|----------|---------|
-| Login / Maison | ![Login](docs/screenshots/01-login.png) |
-| Onboarding | ![Onboarding](docs/screenshots/02-onboarding.png) |
-| Armario | ![Armario](docs/screenshots/03-wardrobe.png) |
-| Atelier (chat) | ![Atelier](docs/screenshots/04-stylist.png) |
-| Generar look | ![Generar](docs/screenshots/05-generate.png) |
-| Resultado try-on | ![Look](docs/screenshots/06-look.png) |
-| Perfil / identidad | ![Perfil](docs/screenshots/07-profile.png) |
+### Login — Maison
+
+![Login Maison](docs/screenshots/01-login.png)
+
+### Onboarding 01 — Identidad
+
+![Onboarding identidad](docs/screenshots/02-onboarding-identidad.png)
+
+### Onboarding 02 — Armario
+
+![Onboarding armario](docs/screenshots/03-onboarding-armario.png)
+
+### Onboarding 03 — Recomendaciones
+
+![Onboarding recomendaciones](docs/screenshots/04-onboarding-recomendaciones.png)
+
+### Identidad — Lookbook personal
+
+![Lookbook de identidad](docs/screenshots/05-identidad-lookbook.png)
 
 ---
 
@@ -270,20 +282,4 @@ firebase deploy --only hosting
 
 Hosting sirve `build/web` con rewrite SPA a `index.html`.
 
-### Preview actual
-
-El entorno de este agente **no tenía sesión de Firebase CLI**, así que el hosting de producto (`aifit-a7f6b.web.app`) no se pudo publicar desde aquí.
-
-Preview temporal (Vercel, reclamar para que no caduque):
-
-- App: https://temporary-swift-apogee-mo8us1l.vercel.app
-- Reclamar: https://vercel.com/claim-deployment?code=6cf4fe91-3170-4b7b-a354-62abc11929fc
-
-Cuando puedas autenticar Firebase en local o con `FIREBASE_TOKEN`:
-
-```bash
-flutter build web --release
-firebase deploy --only hosting
-```
-
-La URL de producción del proyecto es `https://aifit-a7f6b.web.app`.
+**Producción:** [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app)
