@@ -11,9 +11,27 @@ Este README documenta las **tecnologías**, cómo se **da contexto a los modelos
 
 ## Capturas de producto
 
-Las capturas de la app en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app) viven en `docs/screenshots/`.
+App en [https://aifit-a7f6b.web.app](https://aifit-a7f6b.web.app) · Atelier: [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
 
-Atelier: [https://aifit-a7f6b.web.app/stylist](https://aifit-a7f6b.web.app/stylist)
+### Armario
+
+![Armario](docs/images/01-armario.png)
+
+### Perfil e identidad
+
+![Perfil](docs/images/02-perfil.png)
+
+### Historial de try-on
+
+![Mis outfits](docs/images/03-outfits.png)
+
+### Detalle de look
+
+![Detalle de outfit](docs/images/04-outfit-detalle.png)
+
+### Atelier
+
+![Atelier](docs/images/05-atelier.png)
 
 ---
 
@@ -232,7 +250,7 @@ lib/
     simulation/    presentation                  Resultado lookbook
 
 functions/                           # Samples Genkit (no es el path de producción)
-docs/                                # Arquitectura, pricing, prompts
+docs/                                # Arquitectura, pricing, prompts, capturas (`docs/images/`)
 web/                                 # index.html, manifest PWA
 android/ ios/                        # Hosts nativos
 ```
