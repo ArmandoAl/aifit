@@ -269,7 +269,7 @@ class _AddWardrobeItemPageState extends State<AddWardrobeItemPage> {
       child: Column(
         children: [
           // Image preview
-          Container(
+          SizedBox(
             height: 300,
             width: double.infinity,
             child: ClipRRect(

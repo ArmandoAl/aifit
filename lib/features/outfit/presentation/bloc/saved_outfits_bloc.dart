@@ -62,7 +62,6 @@ class SavedOutfitsBloc extends Bloc<SavedOutfitsEvent, SavedOutfitsState> {
 
       // Recargar outfits
       if (state is SavedOutfitsLoaded) {
-        final currentState = state as SavedOutfitsLoaded;
         add(LoadSavedOutfits());
       }
     } catch (e) {

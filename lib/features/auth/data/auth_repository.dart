@@ -121,7 +121,7 @@ class AuthRepository {
       debugPrint('   Platform: ${defaultTargetPlatform.name}');
 
       if (kIsWeb) {
-        return _signInWithGoogleWebPopup();
+        return await _signInWithGoogleWebPopup();
       }
 
       final firebaseUser = await _signInWithGoogleNative();

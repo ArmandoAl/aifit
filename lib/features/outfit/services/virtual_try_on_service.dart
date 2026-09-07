@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -194,7 +192,7 @@ class VirtualTryOnService {
 
       if (imageBytes == null) return null;
 
-      return _storageService.uploadOutfitTryOn(
+      return await _storageService.uploadOutfitTryOn(
         userId: userId,
         bytes: imageBytes,
       );

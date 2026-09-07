@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -125,7 +123,7 @@ class UserBaseImageService {
   }) async {
     if (collageUrl != null && collageUrl.isNotEmpty) {
       try {
-        return NetworkImageLoader.downloadBytes(_dio, collageUrl);
+        return await NetworkImageLoader.downloadBytes(_dio, collageUrl);
       } catch (e) {
         debugPrint('⚠️ Could not download stored collage, rebuilding: $e');
       }

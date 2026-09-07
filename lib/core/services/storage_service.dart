@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -58,7 +56,7 @@ class StorageService {
 
       debugPrint('📤 Uploading photo to: $path');
 
-      return _uploadBytes(
+      return await _uploadBytes(
         path: path,
         bytes: image.bytes,
         contentType: 'image/jpeg',
@@ -125,7 +123,7 @@ class StorageService {
 
       debugPrint('📤 Uploading wardrobe item to: $path');
 
-      return _uploadBytes(
+      return await _uploadBytes(
         path: path,
         bytes: image.bytes,
         contentType: 'image/jpeg',

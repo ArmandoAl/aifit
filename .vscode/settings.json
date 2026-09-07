@@ -7,5 +7,6 @@
   "files.watcherExclude": {
     "**/build/**": true,
     "**/ios/build/**": true
-  }
+  },
+  "dart.flutterSdkPath": ".fvm/versions/3.47.1"
 }

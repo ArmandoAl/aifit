@@ -337,7 +337,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
               children: [
                 // Occasion
                 DropdownButtonFormField<String>(
-                  value: _selectedOccasion,
+                  initialValue: _selectedOccasion,
                   decoration: const InputDecoration(
                     labelText: 'Ocasión',
                     border: OutlineInputBorder(),
@@ -378,7 +378,7 @@ class _SavedOutfitsPageState extends State<SavedOutfitsPage> {
 
                 // Season
                 DropdownButtonFormField<String>(
-                  value: _selectedSeason,
+                  initialValue: _selectedSeason,
                   decoration: const InputDecoration(
                     labelText: AppStringsEs.season,
                     border: OutlineInputBorder(),

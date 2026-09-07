@@ -1,4 +1,4 @@
-/// Eventos para el BLoC de generación de outfits
+// Eventos para el BLoC de generación de outfits
 
 abstract class OutfitGenerationEvent {}
 
