@@ -38,8 +38,8 @@ class StylistOutfitCarousel extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 previews.length == 1
-                    ? 'Your look'
-                    : '${previews.length} looks · swipe to explore',
+                    ? 'Tu look'
+                    : '${previews.length} looks · desliza para explorar',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w500,

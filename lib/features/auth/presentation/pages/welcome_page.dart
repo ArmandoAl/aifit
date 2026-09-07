@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/services/onboarding_gate_service.dart';
 import '../../../../core/services/onboarding_prefs.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/atelier_wordmark.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
 
@@ -21,35 +24,38 @@ class _WelcomePageState extends State<WelcomePage> {
 
   final List<OnboardingStep> _steps = [
     OnboardingStep(
-      icon: Icons.camera_alt_rounded,
-      title: 'Sube tus fotos',
+      number: '01',
+      icon: Icons.camera_alt_outlined,
+      title: 'Tu identidad',
       description:
-          'Toma fotos claras de cuerpo completo con buena luz. Cuantas más subas, mejores resultados dará la IA.',
+          'Fotos claras de cara y cuerpo. Así el try-on conserva tu piel, tu silueta y tu presencia.',
       examples: [
         'Cuerpo completo de frente',
         'Perfil lateral',
         'Primer plano del rostro',
-        'Distintas poses',
+        'Luz natural, fondo limpio',
       ],
     ),
     OnboardingStep(
-      icon: Icons.checkroom_rounded,
+      number: '02',
+      icon: Icons.checkroom_outlined,
       title: AppStringsEs.buildWardrobe,
       description: AppStringsEs.buildWardrobeDesc,
       examples: [
         'Prenda extendida',
         'Buena iluminación',
-        'Fondo limpio',
+        'Fondo despejado',
         'Una prenda por foto',
       ],
     ),
     OnboardingStep(
-      icon: Icons.auto_awesome,
+      number: '03',
+      icon: Icons.auto_awesome_outlined,
       title: AppStringsEs.getRecommendations,
       description: AppStringsEs.getRecommendationsDesc,
       examples: [
-        'Pide ideas de outfit',
-        'Por ocasión',
+        'Describe la ocasión',
+        'Looks con tu armario',
         'Coordinación de color',
         'Try-on virtual',
       ],
@@ -91,8 +97,8 @@ class _WelcomePageState extends State<WelcomePage> {
   void _nextPage() {
     if (_currentPage < _steps.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
       );
     } else {
       _finishTips(goToPhotoSetup: true);
@@ -105,143 +111,125 @@ class _WelcomePageState extends State<WelcomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
-            Align(
-              alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _skip,
-                child: const Text(
-                  AppStringsEs.skip,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 8, 0),
+              child: Row(
+                children: [
+                  const AtelierWordmark(
+                    fontSize: 22,
+                    showRule: false,
                   ),
-                ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _skip,
+                    child: Text(
+                      AppStringsEs.skip.toUpperCase(),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            // PageView
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
+                  setState(() => _currentPage = index);
                 },
                 itemCount: _steps.length,
                 itemBuilder: (context, index) {
                   final step = _steps[index];
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 16),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 20),
-                        // Icon
+                        Text(
+                          step.number,
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 64,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gold.withValues(alpha: 0.55),
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Container(
-                          width: 120,
-                          height: 120,
+                          width: 88,
+                          height: 88,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
+                            color: AppColors.surface,
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.4),
+                            ),
+                            boxShadow: AppTheme.ambientCardShadow,
                           ),
                           child: Icon(
                             step.icon,
-                            size: 60,
+                            size: 36,
                             color: AppColors.primary,
                           ),
                         ),
-
-                        const SizedBox(height: 40),
-
-                        // Title
+                        const SizedBox(height: 32),
                         Text(
                           step.title,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: theme.textTheme.headlineLarge,
                           textAlign: TextAlign.center,
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Description
+                        const SizedBox(height: 12),
                         Text(
                           step.description,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: AppColors.textSecondary,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: AppColors.secondary,
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,
                         ),
-
-                        const SizedBox(height: 32),
-
-                        // Examples
+                        const SizedBox(height: 28),
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
                             color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusLg),
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.lightbulb_outline,
-                                    size: 20,
-                                    color: AppColors.secondary,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    AppStringsEs.tips,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                AppStringsEs.tips.toUpperCase(),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppColors.gold,
+                                ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               ...step.examples.map(
                                 (example) => Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 6),
                                   child: Row(
                                     children: [
                                       const Icon(
-                                        Icons.check_circle,
-                                        size: 16,
-                                        color: AppColors.success,
+                                        Icons.north_east,
+                                        size: 14,
+                                        color: AppColors.gold,
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
                                           example,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.textSecondary,
-                                          ),
+                                          style: theme.textTheme.bodyMedium,
                                         ),
                                       ),
                                     ],
@@ -251,60 +239,48 @@ class _WelcomePageState extends State<WelcomePage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
                       ],
                     ),
                   );
                 },
               ),
             ),
-
-            // Page indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _steps.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 280),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: _currentPage == index ? 24 : 8,
-                  height: 8,
+                  width: _currentPage == index ? 28 : 7,
+                  height: 3,
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? AppColors.primary
-                        : AppColors.textSecondary.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
+                        : AppColors.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 24),
-
-            // Next button
+            const SizedBox(height: 22),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: ElevatedButton(
-                onPressed: _nextPage,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  _currentPage == _steps.length - 1
-                      ? AppStringsEs.getStarted
-                      : AppStringsEs.next,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton(
+                  onPressed: _nextPage,
+                  child: Text(
+                    (_currentPage == _steps.length - 1
+                            ? AppStringsEs.getStarted
+                            : AppStringsEs.next)
+                        .toUpperCase(),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
           ],
         ),
       ),
@@ -313,12 +289,14 @@ class _WelcomePageState extends State<WelcomePage> {
 }
 
 class OnboardingStep {
+  final String number;
   final IconData icon;
   final String title;
   final String description;
   final List<String> examples;
 
   OnboardingStep({
+    required this.number,
     required this.icon,
     required this.title,
     required this.description,

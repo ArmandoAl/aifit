@@ -4,25 +4,33 @@ import 'app_colors.dart';
 import 'app_typography.dart';
 
 class AppTheme {
-  /// Sombra ambiental para cards sobre fondo claro (~4% opacity).
+  /// Soft paper shadow — lookbook cards on parchment.
   static const List<BoxShadow> ambientCardShadow = [
     BoxShadow(
-      color: Color(0x0F1A1C1C),
-      blurRadius: 24,
-      offset: Offset(0, 10),
-      spreadRadius: -4,
+      color: Color(0x140F0A08),
+      blurRadius: 28,
+      offset: Offset(0, 14),
+      spreadRadius: -8,
     ),
     BoxShadow(
-      color: Color(0x081A1C1C),
-      blurRadius: 8,
+      color: Color(0x0A1A1410),
+      blurRadius: 6,
       offset: Offset(0, 2),
     ),
   ];
 
-  static const double radiusSm = 4;
-  static const double radiusMd = 8;
-  static const double radiusLg = 16;
-  static const double radiusXl = 24;
+  static const List<BoxShadow> goldGlow = [
+    BoxShadow(
+      color: Color(0x33C4A574),
+      blurRadius: 24,
+      offset: Offset(0, 8),
+    ),
+  ];
+
+  static const double radiusSm = 6;
+  static const double radiusMd = 12;
+  static const double radiusLg = 18;
+  static const double radiusXl = 28;
 
   static ThemeData get lightTheme {
     final colors = AppColors.colorScheme;
@@ -35,13 +43,13 @@ class AppTheme {
       fontFamily: AppTypography.bodyFontFamily,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         foregroundColor: AppColors.onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        titleTextStyle: textTheme.titleLarge,
+        titleTextStyle: textTheme.headlineSmall,
         iconTheme: const IconThemeData(color: AppColors.onSurface),
       ),
       cardTheme: CardThemeData(
@@ -55,7 +63,7 @@ class AppTheme {
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.border,
-        thickness: 0.5,
+        thickness: 0.6,
         space: 32,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -67,8 +75,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          textStyle: textTheme.labelLarge?.copyWith(color: AppColors.onPrimary),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
+          textStyle: textTheme.labelLarge?.copyWith(
+            color: AppColors.onPrimary,
+            letterSpacing: 1.6,
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -79,18 +90,21 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-          textStyle: textTheme.labelLarge?.copyWith(color: AppColors.onPrimary),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
+          textStyle: textTheme.labelLarge?.copyWith(
+            color: AppColors.onPrimary,
+            letterSpacing: 1.6,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.onSurface,
-          side: const BorderSide(color: AppColors.border),
+          side: const BorderSide(color: AppColors.outline),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMd),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -121,7 +135,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceContainerLow,
+        fillColor: AppColors.surface,
         hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.tertiary),
         labelStyle: textTheme.labelLarge,
         border: OutlineInputBorder(
@@ -134,15 +148,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1),
+          borderSide: const BorderSide(color: AppColors.gold, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: const BorderSide(color: AppColors.error),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 18,
+          vertical: 16,
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -156,7 +170,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+        indicatorColor: AppColors.gold.withValues(alpha: 0.18),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return textTheme.labelSmall?.copyWith(color: AppColors.primary);
@@ -199,6 +213,20 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXl)),
         ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.gold;
+          }
+          return AppColors.surface;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return AppColors.surfaceContainerHigh;
+        }),
       ),
     );
   }

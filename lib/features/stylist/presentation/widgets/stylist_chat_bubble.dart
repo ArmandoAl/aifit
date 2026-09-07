@@ -11,36 +11,29 @@ class StylistChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.role == ChatRole.user;
     final text = message.text ?? '';
+    final theme = Theme.of(context);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
-          color: isUser ? AppColors.primary : Colors.white,
+          color: isUser ? AppColors.primary : AppColors.surface,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: isUser ? const Radius.circular(18) : Radius.zero,
-            bottomRight: isUser ? Radius.zero : const Radius.circular(18),
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: Radius.circular(isUser ? 20 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 20),
           ),
-          boxShadow: [
-            if (!isUser)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-          ],
+          border: isUser ? null : Border.all(color: AppColors.border),
         ),
         child: Text(
           text,
-          style: TextStyle(
-            color: isUser ? Colors.white : AppColors.textPrimary,
-            fontSize: 15,
-            height: 1.45,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: isUser ? AppColors.onPrimary : AppColors.onSurface,
+            height: 1.5,
           ),
         ),
       ),

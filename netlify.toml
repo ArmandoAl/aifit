@@ -1,0 +1,11 @@
+{
+  "redirects": [
+    { "from": "/*", "to": "/index.html", "status": 200 }
+  ],
+  "headers": [
+    {
+      "for": "/index.html",
+      "values": { "Cache-Control": "no-cache" }
+    }
+  ]
+}

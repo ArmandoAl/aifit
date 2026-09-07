@@ -1,11 +1,11 @@
 {
-    "name": "aifit",
-    "short_name": "aifit",
+    "name": "AIFit Atelier",
+    "short_name": "AIFit",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FAFAFA",
-    "theme_color": "#BB0026",
-    "description": "AI stylist and virtual try-on for your wardrobe.",
+    "background_color": "#F3EEE6",
+    "theme_color": "#5C2433",
+    "description": "Atelier de moda con IA: armario, looks y try-on virtual.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

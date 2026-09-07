@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
-/// AppBar editorial (fondo claro, sin bloque rojo genérico).
+
+/// Editorial app bar — parchment canvas, gold hairline, serif title.
 class AppPageAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String? subtitle;
@@ -19,7 +20,8 @@ class AppPageAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(subtitle != null ? 64 : kToolbarHeight);
+  Size get preferredSize =>
+      Size.fromHeight(subtitle != null ? 72 : kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +32,24 @@ class AppPageAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: leading,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       foregroundColor: AppColors.onSurface,
       systemOverlayStyle: SystemUiOverlayStyle.dark,
       surfaceTintColor: Colors.transparent,
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: AppColors.border),
+        child: Container(
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.border.withValues(alpha: 0),
+                AppColors.gold.withValues(alpha: 0.55),
+                AppColors.border.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
       ),
       title: subtitle != null
           ? Column(
@@ -44,23 +57,21 @@ class AppPageAppBar extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: theme.textTheme.headlineSmall,
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  subtitle!,
+                  subtitle!.toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppColors.tertiary,
+                    letterSpacing: 1.8,
                   ),
                 ),
               ],
             )
           : Text(
               title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme.textTheme.headlineSmall,
             ),
       centerTitle: false,
       actions: actions,
@@ -83,7 +94,7 @@ class AppSubpageAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize =>
-      Size.fromHeight(subtitle != null ? 64 : kToolbarHeight);
+      Size.fromHeight(subtitle != null ? 72 : kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {

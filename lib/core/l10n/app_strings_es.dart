@@ -5,21 +5,25 @@ class AppStringsEs {
   // —— App / navegación ——
   static const appName = 'AIFit';
   static const navWardrobe = 'Armario';
-  static const navStylist = 'Estilista';
+  static const navStylist = 'Atelier';
   static const navProfile = 'Perfil';
 
   // —— Login ——
-  static const loginTagline = 'Tu estilista con IA';
+  static const loginTagline = 'Tu estilista personal';
   static const loginDescription =
-      'Crea outfits perfectos con IA usando tu guardarropa real';
+      'Looks a medida con tu armario real. Inteligencia de moda, try-on virtual y un atelier en el bolsillo.';
   static const continueWithGoogle = 'Continuar con Google';
   static const signingIn = 'Iniciando sesión...';
   static const termsLine =
       'Al continuar, aceptas nuestros Términos de servicio y Política de privacidad.';
 
   // —— Armario ——
-  static const myWardrobe = 'Mi armario';
-  static const curateCloset = 'Organiza tu guardarropa';
+  static const myWardrobe = 'Armario';
+  static const curateCloset = 'Colección personal';
+  static const emptyWardrobeTitle = 'Tu closet espera';
+  static const emptyWardrobeSubtitle =
+      'Fotografía cada prenda. La IA la cataloga y arma looks con lo que ya tienes.';
+  static const addFirstPiece = 'Añadir primera prenda';
   static const addToWardrobe = 'Añadir al armario';
   static const addToWardrobeSubtitle = 'Importa prendas a tu closet';
   static const chooseGallery = 'Elegir de la galería';
@@ -74,8 +78,8 @@ class AppStringsEs {
       'No se pudo crear un outfit con tu armario actual.';
 
   // —— Estilista / chat ——
-  static const aiStylist = 'Estilista IA';
-  static const premiumStyling = 'Sesión de estilo premium';
+  static const aiStylist = 'Atelier';
+  static const premiumStyling = 'Consulta privada';
   static const savedOutfits = 'Outfits guardados';
   static const quickGenerate = 'Generación rápida';
   static const describeOccasionHint =

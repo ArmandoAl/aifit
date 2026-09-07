@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/platform/image_preview.dart';
 import '../../../../core/platform/app_image.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/l10n/app_strings_es.dart';
+import '../../../../core/widgets/app_page_app_bar.dart';
 import '../../../../core/utils/keyboard_utils.dart';
 import '../../../../core/widgets/shell_bottom_insets.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -542,8 +544,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
+      appBar: AppPageAppBar(
+        title: AppStringsEs.profile,
+        subtitle: 'Identidad y lookbook',
+        automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -560,7 +564,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Icon(Icons.logout, size: 20),
                     SizedBox(width: 8),
-                    Text('Logout'),
+                    Text('Cerrar sesión'),
                   ],
                 ),
               ),
@@ -570,7 +574,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Icon(Icons.delete_forever, color: Colors.red, size: 20),
                     SizedBox(width: 8),
-                    Text('Delete Account', style: TextStyle(color: Colors.red)),
+                    Text('Eliminar cuenta', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
@@ -648,7 +652,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
-                          'Premium Member',
+                          'Miembro atelier',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -672,8 +676,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 else
                   _buildPhotoSection(
-                    title: 'Body Photos',
-                    subtitle: 'Full body shots for better AI results',
+                    title: 'Fotos de cuerpo',
+                    subtitle: 'Cuerpo completo para un try-on más fiel',
                     bodyPhotoUrls: _bodyPhotoUrls,
                     facePhotoUrls: [],
                     localBodyPhotos: _bodyPhotos,
@@ -687,8 +691,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 // Face Photos Section
                 if (!_isLoadingPhotos)
                   _buildPhotoSection(
-                    title: 'Face Photos',
-                    subtitle: 'Close-up face shots for realistic try-ons',
+                    title: 'Fotos de rostro',
+                    subtitle: 'Primer plano para anclar identidad',
                     bodyPhotoUrls: [],
                     facePhotoUrls: _facePhotoUrls,
                     localBodyPhotos: [],
@@ -723,7 +727,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
-                                'AI Base Image Generated',
+                        'Imagen base de identidad',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -852,8 +856,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             Expanded(
                               child: Text(
                                 _baseImageUrl != null
-                                    ? 'Regenerate AI Base Image'
-                                    : 'Generate AI Base Image',
+                                    ? 'Regenerar imagen base'
+                                    : 'Generar imagen base',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -898,10 +902,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                             label: Text(
                               _isGeneratingBaseImage
-                                  ? 'Generating...'
+                                  ? 'Generando...'
                                   : _baseImageUrl != null
-                                  ? 'Regenerate Base Image'
-                                  : 'Generate Base Image',
+                                  ? 'Regenerar imagen base'
+                                  : 'Generar imagen base',
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,
@@ -939,7 +943,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           )
                         : const Text(
-                            'Save Profile',
+                            'Guardar perfil',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -973,7 +977,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Pro Tip',
+                              'Consejo de atelier',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -982,7 +986,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'More photos = Better AI results! Upload photos with good lighting and clear backgrounds.',
+                              'Más fotos, mejor try-on. Luz natural y fondo despejado hacen que la IA conserve tu identidad.',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,

@@ -1,178 +1,244 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../../../core/l10n/app_strings_es.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/atelier_wordmark.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            // La navegación la maneja el router automáticamente
-          }
-        },
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, AppColors.primaryVariant],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
-
-                  // Logo o Icono
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.inverseSurface,
+        body: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthAuthenticated) {
+              // La navegación la maneja el router automáticamente
+            }
+          },
+          child: Stack(
+            children: [
+              const _AtelierBackdrop(),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 28),
+                      Text(
+                        'LOOKBOOK DIGITAL',
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 4.4,
+                          color: AppColors.gold.withValues(alpha: 0.9),
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.checkroom_rounded,
-                      size: 60,
-                      color: AppColors.primary,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Título
-                  const Text(
-                    'AIFit',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Subtítulo
-                  const Text(
-                    AppStringsEs.loginTagline,
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white70,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Descripción
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      AppStringsEs.loginDescription,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white60,
-                        height: 1.5,
                       ),
-                    ),
-                  ),
+                      const Spacer(flex: 2),
+                      const AtelierWordmark(
+                        color: AppColors.onInverseSurface,
+                        fontSize: 56,
+                        kicker: 'MAISON',
+                      ),
+                      const SizedBox(height: 28),
+                      Text(
+                        AppStringsEs.loginTagline,
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.gold,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppStringsEs.loginDescription,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: AppColors.onInverseSurface.withValues(
+                            alpha: 0.68,
+                          ),
+                        ),
+                      ),
+                      const Spacer(flex: 3),
+                      Container(
+                        width: 48,
+                        height: 0.8,
+                        color: AppColors.gold.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 28),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          final isLoading =
+                              state is AuthLoading || state is AuthSigningIn;
 
-                  const Spacer(),
-
-                  // Botón de Google Sign-In
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      final isLoading =
-                          state is AuthLoading || state is AuthSigningIn;
-
-                      return ElevatedButton.icon(
-                        onPressed: isLoading
-                            ? null
-                            : () {
-                                context.read<AuthBloc>().add(
-                                  const AuthLoginRequested(),
-                                );
-                              },
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppColors.primary,
-                                  ),
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () {
+                                      context.read<AuthBloc>().add(
+                                            const AuthLoginRequested(),
+                                          );
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.surface,
+                                foregroundColor: AppColors.onSurface,
+                                disabledBackgroundColor: AppColors.surface
+                                    .withValues(alpha: 0.85),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                              )
-                            : Image.asset(
-                                'assets/images/google_logo.png',
-                                width: 24,
-                                height: 24,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.login, size: 24),
                               ),
-                        label: Text(
-                          isLoading
-                              ? AppStringsEs.signingIn
-                              : AppStringsEs.continueWithGoogle,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const _GoogleMark(),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          AppStringsEs.continueWithGoogle
+                                              .toUpperCase(),
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 1.6,
+                                            color: AppColors.onSurface,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        AppStringsEs.termsLine,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          height: 1.5,
+                          color: AppColors.onInverseSurface.withValues(
+                            alpha: 0.42,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.textPrimary,
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 8,
-                        ),
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 36),
+                    ],
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Disclaimer
-                  const Text(
-                    AppStringsEs.termsLine,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white54,
-                      height: 1.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0x14000000)),
+      ),
+      child: Text(
+        'G',
+        style: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          height: 1,
+          color: const Color(0xFF4285F4),
+        ),
+      ),
+    );
+  }
+}
+
+class _AtelierBackdrop extends StatelessWidget {
+  const _AtelierBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF2A1C1C),
+                AppColors.inverseSurface,
+                Color(0xFF120E0C),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: -80,
+          right: -60,
+          child: Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withValues(alpha: 0.28),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 80,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          left: -40,
+          child: Container(
+            width: 180,
+            height: 180,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.gold.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -175,14 +175,17 @@ class _PhotoSetupPageState extends State<PhotoSetupPage> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tus fotos'),
+        title: const Text('Identidad'),
         actions: [
           TextButton(
             onPressed: _isUploading ? null : _skip,
-            child: const Text(
-              'Omitir',
-              style: TextStyle(color: AppColors.textSecondary),
+            child: Text(
+              'OMITIR',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
             ),
           ),
         ],
@@ -197,11 +200,12 @@ class _PhotoSetupPageState extends State<PhotoSetupPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Ayuda a la IA a conocerte',
+                      'Tu lookbook personal',
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
+                        height: 1.15,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -245,15 +249,18 @@ class _PhotoSetupPageState extends State<PhotoSetupPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.secondary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: const Row(
                         children: [
                           Icon(
-                            Icons.tips_and_updates,
-                            color: AppColors.secondary,
-                            size: 24,
+                            Icons.wb_sunny_outlined,
+                            color: AppColors.gold,
+                            size: 22,
                           ),
                           SizedBox(width: 12),
                           Expanded(
